@@ -108,6 +108,18 @@ pane offers one button that runs the configured external launcher
 (`wt.exe -d "{cwd}" {command}` by default) through `child_process.spawn`
 with `detached: true`; see `src/platform/external.ts`.
 
+**Another plugin can type into a shell pane, and only type.**
+`typeText` and `newTerminalWithText` (`src/main.ts`) write text to a pane's
+pty through xterm's paste path. `src/view/typed.ts` refuses, before any
+byte is sent, a text with a line break or any other control character, a
+pane that is not running a shell (`launch !== 'shell'`), and a pane whose
+process is absent, ended or not yet ready. So the most another plugin can
+do is put a line in front of the user; running it is the user's Enter.
+`test/typed.test.mjs` covers every rule; `tools/smoke-typed.mjs` sends the
+bracketed line to a real shell and proves it sits there unrun until a `\r`
+is sent. This adds no spawn path: the pane's process is the one
+`openTerminal` starts.
+
 **Claude session guard.** Two live processes writing one Claude session
 file fork it silently. `src/claude/held.ts` keeps a session id in at most
 one pane; a second `claude --resume` on a held id is refused before it

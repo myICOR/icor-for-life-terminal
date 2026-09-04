@@ -176,8 +176,11 @@ With a `returnTo`, the pane shows `Back to chat` in its header while the CLI
 runs and in the exit row after it ends; the button asks the CLI to exit
 (`/exit`), waits for it (10 s ceiling), then hands the same leaf back with
 `returnTo`. Never while the process is alive. The plugin exposes
-`holdsSession(id)` for the other side's check. The whole contract, stated
-once: [docs/handoff.md](docs/handoff.md).
+`holdsSession(id)` for the other side's check, and `typeText(text, leaf?)`
+/ `newTerminalWithText(text, cwd?)` so another plugin can put a line on a
+shell pane's input line for the user to read and run: as a paste, never
+with an Enter, and only into a shell. The whole contract, stated once:
+[docs/handoff.md](docs/handoff.md).
 
 ## Restore on reload
 

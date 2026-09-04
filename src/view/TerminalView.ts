@@ -25,6 +25,8 @@ import type { PaneRefs } from './pane';
 import { readFontFamily, readPalette } from './theme';
 import { EXIT_CEILING_MS, exitThenSwap, parseTerminalState } from './handoff';
 import type { LaunchKind, ReturnTo, TerminalViewState } from './handoff';
+import { TYPE_PROMPT_CEILING_MS, TYPE_SETTLE_MS, typeRefusal } from './typed';
+import type { TypeTarget } from './typed';
 import { externalLaunch, openExternalTerminal } from '../platform/external';
 import { PromptModal } from './PromptModal';
 import type TerminalPlugin from '../main';
@@ -62,6 +64,8 @@ export class TerminalView extends ItemView {
   private resizeTimer: number | null = null;
   private pending = 0;
   private paused = false;
+  /** The process has drawn something (its first prompt, for a shell). */
+  private firstOutput = false;
   private scopePushed = false;
   private readonly holder = `terminal-${++holderCounter}`;
   private heldId: string | null = null;
@@ -272,7 +276,10 @@ export class TerminalView extends ItemView {
     const term = this.term;
     const textarea = term?.textarea;
     if (!term || !textarea) return;
-    this.registerDomEvent(textarea, 'focus', () => this.pushScope());
+    this.registerDomEvent(textarea, 'focus', () => {
+      this.pushScope();
+      this.plugin.noteFocused(this);
+    });
     this.registerDomEvent(textarea, 'blur', () => this.popScope());
     const platform = process.platform;
     term.attachCustomKeyEventHandler((evt) => {
@@ -477,6 +484,7 @@ export class TerminalView extends ItemView {
     this.pty = pty;
     this.pending = 0;
     this.paused = false;
+    this.firstOutput = false;
     this.ptyCleanup.push(
       pty.onData((chunk) => this.onOutput(chunk)),
       pty.onExit((exit) => {
@@ -498,6 +506,7 @@ export class TerminalView extends ItemView {
     const term = this.term;
     const pty = this.pty;
     if (!term || !pty) return;
+    this.firstOutput = true;
     this.pending += chunk.length;
     if (!this.paused && this.pending > HIGH_WATER) {
       pty.pause();
@@ -660,6 +669,72 @@ export class TerminalView extends ItemView {
       this.swapping = false;
       this.backAction?.removeClass('is-disabled');
     }
+  }
+
+  /* ---------------------------------------------------------- typed text */
+
+  /** What the typing rules need to know about this pane right now. */
+  typeTarget(): TypeTarget | null {
+    const pty = this.pty;
+    if (!pty) return null;
+    return { ready: pty.ready, alive: pty.alive, launch: this.state.launch };
+  }
+
+  /**
+   * Puts `text` on the shell's input line through xterm's own paste path
+   * (the mode 2004 markers when the shell asked for them), never an Enter.
+   * The rules in ./typed.ts decide; false is a refusal, and nothing was
+   * sent. Public through the plugin: docs/handoff.md, Public API.
+   */
+  typeText(text: string): boolean {
+    if (typeRefusal(text, this.typeTarget()) !== null) return false;
+    const term = this.term;
+    if (!term || !this.pty) return false;
+    term.paste(text);
+    return true;
+  }
+
+  /**
+   * Resolves true once the shell is ready for typed text: the helper has
+   * said `ready`, the process has drawn its first output (the prompt), or
+   * the ceiling passed with the helper ready and the shell silent, then a
+   * short settle. False when there is no process or it ended first.
+   */
+  async awaitPrompt(settleMs = TYPE_SETTLE_MS, ceilingMs = TYPE_PROMPT_CEILING_MS): Promise<boolean> {
+    const pty = this.pty;
+    if (!pty || !pty.alive) return false;
+    if (!(pty.ready && this.firstOutput)) {
+      const ok = await new Promise<boolean>((resolve) => {
+        let done = false;
+        let offReady = (): void => undefined;
+        let offData = (): void => undefined;
+        let offExit = (): void => undefined;
+        let limit: number | null = null;
+        const finish = (value: boolean): void => {
+          if (done) return;
+          done = true;
+          offReady();
+          offData();
+          offExit();
+          if (limit !== null) window.clearTimeout(limit);
+          resolve(value);
+        };
+        const check = (): void => {
+          if (pty.ready && this.firstOutput) finish(true);
+        };
+        offExit = pty.onExit(() => finish(false));
+        offReady = pty.onReady(check);
+        offData = pty.onData(() => {
+          this.firstOutput = true;
+          check();
+        });
+        limit = window.setTimeout(() => finish(pty.ready && pty.alive), ceilingMs);
+        check();
+      });
+      if (!ok) return false;
+    }
+    await new Promise<void>((r) => window.setTimeout(r, settleMs));
+    return this.pty === pty && pty.alive;
   }
 
   private flashBell(): void {

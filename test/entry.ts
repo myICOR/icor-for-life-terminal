@@ -13,5 +13,6 @@ export * from '../src/settings/definitions';
 export * from '../src/view/theme';
 export { exitKicker, exitNote, isFailure } from '../src/view/pane';
 export * from '../src/view/handoff';
+export * from '../src/view/typed';
 export { externalLaunch } from '../src/platform/external';
 export { HELPER_ARGV_PREFIX } from '../src/pty/PtyProcess';

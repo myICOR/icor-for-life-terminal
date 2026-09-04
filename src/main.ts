@@ -20,6 +20,7 @@ import { TerminalSettingsTab } from './settings/SettingsTab';
 import { PromptModal } from './view/PromptModal';
 import { TerminalView } from './view/TerminalView';
 import type { LaunchKind } from './view/TerminalView';
+import { textRefusal } from './view/typed';
 
 const TREE_LAUNCHER_CLASS = 'ict-tree-launcher';
 const RIBBON_MENU_CLASS = 'ict-menu';
@@ -46,6 +47,8 @@ export default class TerminalPlugin extends Plugin {
   override settings: TerminalSettings = DEFAULT_SETTINGS;
   readonly held = new HeldSessions();
   private readonly views: TerminalView[] = [];
+  /** The pane whose terminal last took keyboard focus; what `typeText` targets when no leaf is named. */
+  private lastFocused: TerminalView | null = null;
 
   get vaultPath(): string {
     const adapter = this.app.vault.adapter;
@@ -147,6 +150,11 @@ export default class TerminalPlugin extends Plugin {
   untrackView(view: TerminalView): void {
     const i = this.views.indexOf(view);
     if (i >= 0) this.views.splice(i, 1);
+    if (this.lastFocused === view) this.lastFocused = null;
+  }
+
+  noteFocused(view: TerminalView): void {
+    this.lastFocused = view;
   }
 
   activeTerminal(): TerminalView | null {
@@ -169,6 +177,47 @@ export default class TerminalPlugin extends Plugin {
     const id = normaliseSessionId(sessionId);
     if (!id) return false;
     return this.held.holderOf(id) !== null;
+  }
+
+  /** The pane a leaf holds, or the most recently focused one, else the active one, else the last opened. */
+  private terminalFor(leaf?: WorkspaceLeaf): TerminalView | null {
+    if (leaf) return leaf.view instanceof TerminalView ? leaf.view : null;
+    if (this.lastFocused && this.views.includes(this.lastFocused)) return this.lastFocused;
+    return this.activeTerminal() ?? this.views[this.views.length - 1] ?? null;
+  }
+
+  /**
+   * Public (docs/handoff.md, Public API): writes `text` to the pty of the
+   * given terminal leaf, or of the most recently focused terminal pane when
+   * none is given, exactly as a paste would (bracketed when the shell asked
+   * for it), and NEVER an Enter: the user reads the line and presses it, or
+   * does not. Returns false, having sent nothing, when there is no pane
+   * ready, when the text carries a line break or another control character,
+   * or when the pane is not running a shell (`launch !== 'shell'`).
+   * `app.plugins.plugins['icor-for-life-terminal']?.typeText(text, leaf)`.
+   */
+  typeText(text: string, leaf?: WorkspaceLeaf): boolean {
+    if (textRefusal(text) !== null) return false;
+    const view = this.terminalFor(leaf);
+    if (!view) return false;
+    return view.typeText(text);
+  }
+
+  /**
+   * Public (docs/handoff.md, Public API): opens a shell pane (the default
+   * profile, in `cwd` or the profile's folder) and types `text` once the
+   * shell has drawn its first prompt. Same rules and the same "never Enter"
+   * as `typeText`; the text is checked before any pane opens. Resolves
+   * false when the text is refused, no pane could open, or the shell ended
+   * before it was ready. Windows opens the external launcher and resolves
+   * false: there is no pty to type into.
+   */
+  async newTerminalWithText(text: string, cwd?: string): Promise<boolean> {
+    if (textRefusal(text) !== null) return false;
+    const view = await this.openTerminal({ launch: 'shell', cwd });
+    if (!view) return false;
+    if (!(await view.awaitPrompt())) return false;
+    return view.typeText(text);
   }
 
   private activeFileDir(): string | null {

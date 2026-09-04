@@ -12,7 +12,7 @@
     "lint": "eslint src styles.css",
     "pretest": "node test/build.mjs",
     "test": "node --test test/*.test.mjs",
-    "smoke": "node tools/smoke-helper.mjs",
+    "smoke": "node tools/smoke-helper.mjs && node tools/smoke-typed.mjs",
     "gate": "npm run typecheck && npm run build && npm run lint && npm test && npm run smoke"
   },
   "dependencies": {

@@ -136,3 +136,63 @@ never holding the id it is asked to resume.
    so instead of resuming.
 3. `ChatView.setState` keeps accepting `{ resumeSessionId, provider }`; that
    is the whole `returnTo.state`, and the terminal never adds to it.
+
+## 6. Public API
+
+Three methods on the plugin instance,
+`app.plugins.plugins['icor-for-life-terminal']`, typed in `src/main.ts`.
+Everything else on the instance is internal and may change.
+
+```ts
+holdsSession(sessionId: string): boolean
+typeText(text: string, leaf?: WorkspaceLeaf): boolean
+newTerminalWithText(text: string, cwd?: string): Promise<boolean>
+```
+
+`holdsSession(id)`: section 4. True while a terminal pane has a live
+`claude --resume <id>` on that id; the id is normalised first.
+
+`typeText(text, leaf?)`: writes `text` to the pty of the terminal pane on
+`leaf`, or of the most recently focused terminal pane when `leaf` is
+omitted, exactly as a paste would: through xterm's own paste path, so the
+shell receives it inside the bracketed-paste markers whenever it has asked
+for them (mode 2004; zsh, bash 5.1+ and fish do) and as plain bytes
+otherwise. **It never appends an Enter.** The line sits on the input line;
+the user reads it and presses Enter, or does not. That is the vault's rule
+(a runtime is started by the user, never by an agent), and it is what the
+AI Chat install offer needs: the vendor's one-line install lands in the
+pane and stops.
+
+Returns `false`, having sent nothing, when:
+
+- there is no terminal pane, the pane has no process, the process has
+  ended, or the helper has not yet reported `ready`;
+- `text` is empty, or contains `\n` or `\r` (that is the Enter the user
+  never pressed), or any other control character (`\x04` ends a shell,
+  `\x1b` could close the paste bracket early; tab is allowed);
+- the pane is not running a shell (`launch !== 'shell'`): a line typed
+  into the Claude TUI is a prompt to a model, not a command a user reads.
+
+The rules are pure (`src/view/typed.ts`, `test/typed.test.mjs`). The live
+proof is `tools/smoke-typed.mjs`: the bracketed line, sent to a real shell
+on the helper's pty, is echoed on the input line and has not run 600 ms
+later; one `\r` later the same line runs.
+
+`newTerminalWithText(text, cwd?)`: opens a shell pane (the default
+profile, in `cwd` when given, else the profile's folder) and calls
+`typeText` on it once the shell is ready for input: the helper's `ready`,
+then the first output (the prompt) or a 3 s ceiling, then a 250 ms settle.
+The text is checked BEFORE the pane opens, so a refused text opens
+nothing. Resolves `false` when the text is refused, when no pane could
+open (a vault with no folder on disk), or when the shell ended before it
+was ready. On Windows the pane offers the external launcher and this
+resolves `false`: there is no pty to type into.
+
+```ts
+const terminal = app.plugins.plugins['icor-for-life-terminal'];
+const typed = terminal ? await terminal.newTerminalWithText(installCommand, vaultPath) : false;
+if (!typed) {
+  // fall back: clipboard, and say so
+}
+```
+
