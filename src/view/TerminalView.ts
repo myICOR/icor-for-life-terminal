@@ -160,9 +160,15 @@ export class TerminalView extends ItemView {
     this.ensureLaunched();
   }
 
+  /* Two surfaces show the title: the tab (the leaf redraws it) and the pane's
+     own header (the view holds that element). Both are Obsidian internals,
+     both optional-called, and a build where either is absent loses a title
+     refresh and nothing else. */
   private refreshHeader(): void {
     const leaf = this.leaf as unknown as { updateHeader?: () => void };
     leaf.updateHeader?.();
+    const view = this as unknown as { titleEl?: HTMLElement };
+    view.titleEl?.setText(this.getDisplayText());
   }
 
   /* ---------------------------------------------------------------- mount */

@@ -417,6 +417,14 @@
 
 /* ------------------------------------------------------------ 1 the pane */
 
+/* `hidden` has to win. The rows below are flex containers and the buttons
+   are inline-flex, and an author display rule out-ranks the user agent's
+   [hidden] { display: none }. Measured in the first sideload: the find bar,
+   the notice and the exit row all painted at once. (0,2,0) beats every
+   single-class rule in this file. */
+.ict-root [hidden] { display: none; }
+
+
 .ict-host {
   padding: 0;
   overflow: hidden;
