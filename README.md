@@ -1,7 +1,7 @@
 # ICOR for Life - Terminal
 
 A real terminal inside your vault. Your login shell in a tab or a split,
-keyboard capture that still lets Obsidian keep its palette, and a
+keyboard capture that still lets the command palette through, and a
 one-command launcher for Claude Code in the vault folder.
 
 The terminal is a pane like any other: it lives in Obsidian's own tabs and
@@ -31,6 +31,11 @@ later.
   PATH and uses your vault's folder on disk as the working directory.
 - **It makes no network connection of its own.** No telemetry, no update
   check, no fetch. What you run inside the shell is yours.
+- **It uses the clipboard only on your key.** `Cmd+C` copies the selection
+  and `Cmd+V` pastes, through the browser's own copy and paste events on
+  the terminal's input; the plugin never reads the clipboard itself. Its
+  one write of its own is opt-in: with "Copy on select" enabled (off by
+  default), a selection you make is written to the clipboard as you make it.
 - **It scrubs one family of environment variables.** Every variable whose
   name starts with `CLAUDE` is removed from what the shell inherits, because
   a Claude Code CLI that inherits `CLAUDE_CODE_CHILD_SESSION` stops saving
@@ -222,6 +227,14 @@ reads the new size back from `stty size`, and sees the exit code through.
 
 `styles.css` is assembled by the build from xterm's own stylesheet and
 `src/terminal.css`; edit the source, never the assembled file.
+
+A release is a bare version tag (`0.1.1`, no `v`) pushed to `main`.
+`.github/workflows/release.yml` runs the gate on the tagged commit, checks
+the tag equals the manifest version, attests `main.js`, `manifest.json`
+and `styles.css` with GitHub artifact attestations, and publishes the
+release with those three assets and the notes from
+`docs/releases/<version>.md`. The manual `gh release create` stays the
+fallback and a release cut that way says so in its notes.
 
 ## Licence
 

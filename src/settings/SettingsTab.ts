@@ -4,7 +4,7 @@
  * is the fallback and nothing else, which is the case its deprecation notice
  * carves out. */
 
-import { PluginSettingTab, Setting } from 'obsidian';
+import { PluginSettingTab, Setting, requireApiVersion } from 'obsidian';
 import type { App } from 'obsidian';
 import process from 'node:process';
 import { INK_PLUGIN_ATTR, INK_PLUGIN_NAME } from '../constants';
@@ -19,6 +19,21 @@ type Definitions = ReturnType<PluginSettingTab['getSettingDefinitions']>;
 type Definition = Definitions[number];
 type Group = Extract<Definition, { type: 'group' | 'list' }>;
 type GroupItem = NonNullable<Group['items']>[number];
+
+/* `setWarning` is deprecated in favour of `setDestructive`, which arrived in
+ * Obsidian 1.13 and is therefore not callable at the 1.7.2 floor (the
+ * directory's own `no-unsupported-api` rule says so). Both methods only add
+ * one class, so the class is set directly: `mod-destructive` from 1.13 on,
+ * `mod-warning` (what `setWarning` set) below it. No deprecated call, no
+ * call above the floor. The button type is read off `Setting.addButton`
+ * rather than imported, because `ButtonComponent` is annotated @since 1.10.0
+ * and the floor test reads the annotation. */
+type Button = Parameters<Parameters<Setting['addButton']>[0]>[0];
+
+function destructive(button: Button): Button {
+  button.buttonEl.addClass(requireApiVersion('1.13.0') ? 'mod-destructive' : 'mod-warning');
+  return button;
+}
 
 const CWD_OPTIONS: Record<CwdRule, string> = {
   vault: 'Vault root',
@@ -240,9 +255,7 @@ export class TerminalSettingsTab extends PluginSettingTab {
     );
     if (!isLogin) {
       new Setting(card).addButton((b) =>
-        b
-          .setButtonText('Remove profile')
-          .setWarning()
+        destructive(b.setButtonText('Remove profile'))
           .onClick(() => {
             this.plugin.settings.profiles.splice(index, 1);
             void save().then(redraw);

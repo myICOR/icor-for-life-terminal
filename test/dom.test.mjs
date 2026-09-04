@@ -29,6 +29,50 @@ async function mount(chrome, dark) {
   }
 }
 
+/* The DOM renderer (the fallback behind WebGL) draws underline styles and
+ * strikethrough purely from xterm's classes, so the split into longhands has
+ * to resolve to the same computed decoration the shorthand gave. */
+test('xterm decoration classes still draw after the shorthand split', async () => {
+  const chrome = await Chrome.launch();
+  try {
+    await mount(chrome, false);
+    const facts = await chrome.evaluate(`(() => {
+      const probe = (cls) => {
+        const el = document.createElement('span');
+        el.className = cls;
+        el.textContent = 'x';
+        document.querySelector('.xterm').appendChild(el);
+        const cs = getComputedStyle(el);
+        const out = { line: cs.textDecorationLine, style: cs.textDecorationStyle };
+        el.remove();
+        return out;
+      };
+      return {
+        u1: probe('xterm-underline-1'),
+        u2: probe('xterm-underline-2'),
+        u3: probe('xterm-underline-3'),
+        u4: probe('xterm-underline-4'),
+        u5: probe('xterm-underline-5'),
+        o: probe('xterm-overline'),
+        ou3: probe('xterm-overline xterm-underline-3'),
+        s: probe('xterm-strikethrough'),
+        plain: probe(''),
+      };
+    })()`);
+    assert.deepEqual(facts.u1, { line: 'underline', style: 'solid' });
+    assert.deepEqual(facts.u2, { line: 'underline', style: 'double' });
+    assert.deepEqual(facts.u3, { line: 'underline', style: 'wavy' });
+    assert.deepEqual(facts.u4, { line: 'underline', style: 'dotted' });
+    assert.deepEqual(facts.u5, { line: 'underline', style: 'dashed' });
+    assert.deepEqual(facts.o, { line: 'overline', style: 'solid' });
+    assert.deepEqual(facts.ou3, { line: 'underline overline', style: 'wavy' });
+    assert.deepEqual(facts.s, { line: 'line-through', style: 'solid' });
+    assert.deepEqual(facts.plain, { line: 'none', style: 'solid' }, 'the control span carries no decoration');
+  } finally {
+    await chrome.close();
+  }
+});
+
 test('the pane mounts, every control is a labelled <button>, and the tokens resolve in both rooms', async () => {
   const chrome = await Chrome.launch();
   try {

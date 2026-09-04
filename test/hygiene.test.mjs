@@ -21,7 +21,7 @@ function walk(dir, exts) {
 
 const prose = ['README.md', 'SECURITY.md', 'docs/handoff.md', 'THIRD-PARTY-NOTICES.md', 'manifest.json', 'src/terminal.css', 'esbuild.config.mjs', 'eslint.config.mjs']
   .map((f) => resolve(repo, f))
-  .concat(walk(resolve(repo, 'src'), ['.ts', '.py']), walk(resolve(repo, 'test'), ['.mjs', '.ts', '.html']), walk(resolve(repo, 'tools'), ['.mjs']));
+  .concat(walk(resolve(repo, 'src'), ['.ts', '.py']), walk(resolve(repo, 'test'), ['.mjs', '.ts', '.html']), walk(resolve(repo, 'tools'), ['.mjs']), walk(resolve(repo, 'docs'), ['.md']), walk(resolve(repo, '.github'), ['.yml']));
 
 test('no em dash or en dash anywhere in the repo text', () => {
   const hits = [];
@@ -67,6 +67,13 @@ test('the shipped stylesheet carries none of the findings the directory scanner 
   assert.doesNotMatch(shipped, /::selection/);
   assert.match(shipped, /\.xterm \.xterm-dim \{[^}]*opacity: 1;/, 'the dim reset is kept without the flag');
   assert.match(shipped, /Copyright \(c\) 2014 The xterm\.js authors/, 'xterm.css ships with its licence header');
+  /* 0.1.0 review: every multi-value `text-decoration` shorthand was flagged as
+     only partially supported at the floor. Split into longhands at assembly. */
+  const multi = [...shipped.matchAll(/text-decoration:\s*([^;]+);/g)].filter((m) => m[1].trim().split(/\s+/).length > 1);
+  assert.deepEqual(multi.map((m) => m[0]), [], 'a multi-value text-decoration shorthand survived assembly');
+  assert.match(shipped, /\.xterm-underline-3 \{ text-decoration-line: underline; text-decoration-style: wavy; \}/, 'the wavy underline rides the longhands');
+  assert.match(shipped, /\.xterm-overline\.xterm-underline-2 \{ text-decoration-line: overline underline; text-decoration-style: double; \}/, 'overline plus double underline rides the longhands');
+  assert.match(shipped, /\.xterm-strikethrough \{\s*text-decoration: line-through;/, 'the single-keyword strike shorthand is kept');
 });
 
 test('source carries nothing the scanner reads as obfuscation or self-modification', () => {

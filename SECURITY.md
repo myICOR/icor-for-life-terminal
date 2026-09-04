@@ -103,6 +103,14 @@ update check, no fetch. `main.js` contains no `fetch`, `XMLHttpRequest`,
 has none either). What you run inside the shell is another matter, and it is
 yours.
 
+**It uses the clipboard only on your key.** Copy and paste ride the
+browser's own `copy` and `paste` events on xterm's input textarea
+(`Cmd+C`, `Cmd+V`); the plugin never reads the clipboard itself. Its one write of its own is
+opt-in: with "Copy on select" enabled (off by default),
+`src/view/TerminalView.ts` calls `navigator.clipboard.writeText` with the
+selection when a selection is made. `grep -n clipboard src` finds that one
+call and nothing else.
+
 **Windows.** No process is spawned onto a pseudo-terminal on Windows. The
 pane offers one button that runs the configured external launcher
 (`wt.exe -d "{cwd}" {command}` by default) through `child_process.spawn`
@@ -137,9 +145,15 @@ spawns. This is a data-integrity guard, not a security boundary.
 5. That the keymap scope is popped on blur and close.
 6. That the plugin's own code makes no network call. `main.js` is minified;
    review `src/` and rebuild with `npm run build` to compare.
+7. That the only clipboard access in `src/` is the opt-in copy-on-select
+   write (`grep -n clipboard src`).
 
 ## Obsidian's own guidance
 
 This plugin declares `isDesktopOnly: true`. The Obsidian developer policies
 require disclosure of network use and of access to files outside the vault;
-the README carries both, and this document is the long form.
+the README carries both, and this document is the long form. The
+directory's automated review lists three behaviours for this plugin, file
+system access outside the vault, process spawning (the shell) and clipboard
+use; all three are expected for a terminal and each is described above with
+the file to read.

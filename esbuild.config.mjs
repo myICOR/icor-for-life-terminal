@@ -37,7 +37,28 @@ const production = process.argv[2] === 'production';
  *     against older custom css; `.xterm .xterm-dim { opacity: 1 }` out-ranks
  *     any single-class rule the same way without the flag.
  *   - `.scra { font-size: 11px !important }`: the scrollbar arrow class does
- *     not occur in the runtime at all; the flag is dropped, the rule kept. */
+ *     not occur in the runtime at all; the flag is dropped, the rule kept.
+ *   - `text-decoration: double underline` and the other shorthands that carry
+ *     a style keyword or two lines (the `.xterm-underline-N` and
+ *     `.xterm-overline` rules): the directory's baseline check reads the
+ *     multi-value shorthand as only partially supported at the declared
+ *     floor (0.1.0 review, 2026-09-04). The longhands `text-decoration-line`
+ *     and `text-decoration-style` say exactly the same thing and have been
+ *     complete in Chromium since 57, so the shorthand is split; a
+ *     single-keyword shorthand (`underline`, `overline`, `line-through`)
+ *     passes and is kept as is. */
+const DECORATION_STYLES = new Set(['solid', 'double', 'dotted', 'dashed', 'wavy']);
+
+export function splitTextDecoration(declaration, value) {
+  const tokens = value.trim().split(/\s+/);
+  if (tokens.length < 2) return declaration;
+  const lines = tokens.filter((t) => !DECORATION_STYLES.has(t));
+  const styles = tokens.filter((t) => DECORATION_STYLES.has(t));
+  const out = [`text-decoration-line: ${lines.join(' ')};`];
+  if (styles.length > 0) out.push(`text-decoration-style: ${styles[0]};`);
+  return out.join(' ');
+}
+
 export function transformUpstreamCss(css) {
   return css
     .replace(/^\s*user-select:\s*[^;]+;\s*\n/gm, '')
@@ -45,7 +66,8 @@ export function transformUpstreamCss(css) {
     .replace(/^\s*resize:\s*none;\s*\n/gm, '')
     .replace(/\.xterm \.xterm-accessibility-tree:not\(\.debug\) \*::selection \{[^}]*\}\s*/g, '')
     .replace(/\.xterm-dim \{([^}]*?)opacity:\s*1\s*!important;/g, '.xterm .xterm-dim {$1opacity: 1;')
-    .replace(/font-size:\s*11px\s*!important;/g, 'font-size: 11px;');
+    .replace(/font-size:\s*11px\s*!important;/g, 'font-size: 11px;')
+    .replace(/text-decoration:\s*([^;]+);/g, splitTextDecoration);
 }
 
 export function assembleStyles() {
