@@ -1,0 +1,547 @@
+/* ICOR for Life - Terminal - styles.css is ASSEMBLED by esbuild.config.mjs.
+ * Edit src/terminal.css, never this file. Section 1 is @xterm/xterm/css/xterm.css
+ * verbatim (MIT, see THIRD-PARTY-NOTICES.md); section 2 is the plugin. */
+
+/* ==================================================== 1. xterm.css (upstream) */
+
+/**
+ * Copyright (c) 2014 The xterm.js authors. All rights reserved.
+ * Copyright (c) 2012-2013, Christopher Jeffrey (MIT License)
+ * https://github.com/chjj/term.js
+ * @license MIT
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * Originally forked from (with the author's permission):
+ *   Fabrice Bellard's javascript vt100 for jslinux:
+ *   http://bellard.org/jslinux/
+ *   Copyright (c) 2011 Fabrice Bellard
+ *   The original design remains. The terminal itself
+ *   has been extended to include xterm CSI codes, among
+ *   other features.
+ */
+
+/**
+ *  Default styles for xterm.js
+ */
+
+.xterm {
+    cursor: text;
+    position: relative;
+    -webkit-user-select: none;
+}
+
+.xterm.focus,
+.xterm:focus {
+    outline: none;
+}
+
+.xterm .xterm-helpers {
+    position: absolute;
+    top: 0;
+    /**
+     * The z-index of the helpers must be higher than the canvases in order for
+     * IMEs to appear on top.
+     */
+    z-index: 5;
+}
+
+.xterm .xterm-helper-textarea {
+    padding: 0;
+    border: 0;
+    margin: 0;
+    /* Move textarea out of the screen to the far left, so that the cursor is not visible */
+    position: absolute;
+    opacity: 0;
+    left: -9999em;
+    top: 0;
+    width: 0;
+    height: 0;
+    z-index: -5;
+    /** Prevent wrapping so the IME appears against the textarea at the correct position */
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.xterm .composition-view {
+    /* TODO: Composition position got messed up somewhere */
+    background: #000;
+    color: #FFF;
+    display: none;
+    position: absolute;
+    white-space: nowrap;
+    z-index: 1;
+}
+
+.xterm .composition-view.active {
+    display: block;
+}
+
+.xterm .xterm-viewport {
+    /* On OS X this is required in order for the scroll bar to appear fully opaque */
+    background-color: #000;
+    overflow-y: scroll;
+    cursor: default;
+    position: absolute;
+    right: 0;
+    left: 0;
+    top: 0;
+    bottom: 0;
+}
+
+.xterm .xterm-screen {
+    position: relative;
+}
+
+.xterm .xterm-screen canvas {
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+.xterm-char-measure-element {
+    display: inline-block;
+    visibility: hidden;
+    position: absolute;
+    top: 0;
+    left: -9999em;
+    line-height: normal;
+}
+
+.xterm.enable-mouse-events {
+    /* When mouse events are enabled (eg. tmux), revert to the standard pointer cursor */
+    cursor: default;
+}
+
+.xterm.xterm-cursor-pointer,
+.xterm .xterm-cursor-pointer {
+    cursor: pointer;
+}
+
+.xterm.column-select.focus {
+    /* Column selection mode */
+    cursor: crosshair;
+}
+
+.xterm .xterm-accessibility:not(.debug),
+.xterm .xterm-message {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    z-index: 10;
+    color: transparent;
+    pointer-events: none;
+}
+
+.xterm .xterm-accessibility-tree {
+  font-family: monospace;
+  white-space: pre;
+}
+
+.xterm .xterm-accessibility-tree > div {
+  transform-origin: left;
+  width: fit-content;
+}
+
+.xterm .live-region {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+.xterm .xterm-dim {
+    /* Dim should not apply to background, so the opacity of the foreground color is applied
+     * explicitly in the generated class and reset to 1 here */
+    opacity: 1;
+}
+
+.xterm-underline-1 { text-decoration: underline; }
+.xterm-underline-2 { text-decoration: double underline; }
+.xterm-underline-3 { text-decoration: wavy underline; }
+.xterm-underline-4 { text-decoration: dotted underline; }
+.xterm-underline-5 { text-decoration: dashed underline; }
+
+.xterm-overline {
+    text-decoration: overline;
+}
+
+.xterm-overline.xterm-underline-1 { text-decoration: overline underline; }
+.xterm-overline.xterm-underline-2 { text-decoration: overline double underline; }
+.xterm-overline.xterm-underline-3 { text-decoration: overline wavy underline; }
+.xterm-overline.xterm-underline-4 { text-decoration: overline dotted underline; }
+.xterm-overline.xterm-underline-5 { text-decoration: overline dashed underline; }
+
+.xterm-strikethrough {
+    text-decoration: line-through;
+}
+
+.xterm-screen .xterm-decoration-container .xterm-decoration {
+	z-index: 6;
+	position: absolute;
+}
+
+.xterm-screen .xterm-decoration-container .xterm-decoration.xterm-decoration-top-layer {
+	z-index: 7;
+}
+
+.xterm-decoration-overview-ruler {
+    z-index: 8;
+    position: absolute;
+    top: 0;
+    right: 0;
+    pointer-events: none;
+}
+
+.xterm-decoration-top {
+    z-index: 2;
+    position: relative;
+}
+
+
+
+/* Derived from vs/base/browser/ui/scrollbar/media/scrollbar.css */
+
+/* xterm.js customization: Override xterm's cursor style */
+.xterm .xterm-scrollable-element > .scrollbar {
+    cursor: default;
+}
+
+/* Arrows */
+.xterm .xterm-scrollable-element > .scrollbar > .scra {
+	cursor: pointer;
+	font-size: 11px;
+}
+
+.xterm .xterm-scrollable-element > .visible {
+	opacity: 1;
+
+	/* Background rule added for IE9 - to allow clicks on dom node */
+	background:rgba(0,0,0,0);
+
+	transition: opacity 100ms linear;
+	/* In front of peek view */
+	z-index: 11;
+}
+.xterm .xterm-scrollable-element > .invisible {
+	opacity: 0;
+	pointer-events: none;
+}
+.xterm .xterm-scrollable-element > .invisible.fade {
+	transition: opacity 800ms linear;
+}
+
+/* Scrollable Content Inset Shadow */
+.xterm .xterm-scrollable-element > .shadow {
+	position: absolute;
+	display: none;
+}
+.xterm .xterm-scrollable-element > .shadow.top {
+	display: block;
+	top: 0;
+	left: 3px;
+	height: 3px;
+	width: 100%;
+	box-shadow: var(--vscode-scrollbar-shadow, #000) 0 6px 6px -6px inset;
+}
+.xterm .xterm-scrollable-element > .shadow.left {
+	display: block;
+	top: 3px;
+	left: 0;
+	height: 100%;
+	width: 3px;
+	box-shadow: var(--vscode-scrollbar-shadow, #000) 6px 0 6px -6px inset;
+}
+.xterm .xterm-scrollable-element > .shadow.top-left-corner {
+	display: block;
+	top: 0;
+	left: 0;
+	height: 3px;
+	width: 3px;
+}
+.xterm .xterm-scrollable-element > .shadow.top.left {
+	box-shadow: var(--vscode-scrollbar-shadow, #000) 6px 0 6px -6px inset;
+}
+
+/* ==================================================== 2. ICOR for Life - Terminal */
+
+/* ICOR for Life - Terminal - INKLINE visual grammar.
+ * Every colour rides an --ink-* token with a stock Obsidian fallback, so the
+ * plugin degrades legibly outside the INKLINE theme. A raw hex outside the
+ * token block below is a defect. Gaps are 4/8/12/16/24 rungs; hairlines are
+ * the named exemption. */
+
+/* ------------------------------------------------------------ 0.1 tokens */
+
+.ict-root, .ict-settings, .ict-menu, .ict-modal {
+  --ict-bg: var(--ink-deep, var(--background-primary));
+  --ict-fg: var(--ink-paper, var(--text-normal));
+  --ict-dim: var(--ink-paper-dim, var(--text-muted));
+  --ict-faint: var(--ink-paper-faint, var(--text-muted));
+  --ict-cursor: var(--ink-marker, #d43f16);
+  --ict-marker: var(--ink-marker, #d43f16);
+  --ict-marker-fill: var(--ink-marker-fill, #b93613);
+  --ict-marker-up: var(--ink-marker-fill-hover, #8f2e10);
+  --ict-on-marker: var(--ink-on-marker, #fff6f0);
+  --ict-selection: var(--ink-marker-selection, rgba(212, 63, 22, 0.25));
+  --ict-selection-inactive: var(--ink-marker-selection, rgba(212, 63, 22, 0.16));
+  --ict-search-match: var(--ink-hue-yellow, #7f662f);
+  --ict-search-active: var(--ink-marker, #d43f16);
+  --ict-hairline: var(--ink-hairline, var(--background-modifier-border));
+  --ict-surface: var(--ink-2, var(--background-primary-alt));
+  --ict-input: var(--ink-input, var(--background-secondary));
+  --ict-wash: var(--ink-hover-wash, var(--background-modifier-hover));
+  --ict-destructive-text: var(--ink-destructive-text, #b33a2b);
+  --ict-hand-ink: var(--ink-hand-ink, var(--ink-marker, #b93613));
+  --ict-mono: var(--ink-font-mono, var(--font-monospace, ui-monospace, SFMono-Regular, Menlo, monospace));
+  --ict-body: var(--ink-font-body, var(--font-interface));
+  --ict-hand: var(--ink-font-hand, cursive);
+  --ict-ease: var(--ink-ease-draw, cubic-bezier(0.22, 1, 0.36, 1));
+  --ict-r-control: var(--ink-radius-control, 4px);
+  --ict-r-subtle: var(--ink-radius-subtle, 10px);
+  /* The ANSI sixteen. INKLINE's hue tokens where the theme maps them, and
+     the stock fallbacks are the light-room values of the same family. */
+  --ict-ansi-black: var(--ink-3, #ede9df);
+  --ict-ansi-red: var(--ink-destructive-text, #b33a2b);
+  --ict-ansi-green: var(--ink-success-dot, #5e7a60);
+  --ict-ansi-yellow: var(--ink-hue-yellow, #7f662f);
+  --ict-ansi-blue: var(--ink-hue-indigo, #565e7e);
+  --ict-ansi-magenta: var(--ink-hue-burgundy, #7c5570);
+  --ict-ansi-cyan: var(--ink-hue-cyan, #4e6b73);
+  --ict-ansi-white: var(--ink-paper-dim, #4d4a42);
+  --ict-ansi-bright-black: var(--ink-paper-faint, #5a574e);
+  --ict-ansi-bright-red: var(--ink-marker, #d43f16);
+  --ict-ansi-bright-green: var(--ink-success-dot, #5e7a60);
+  --ict-ansi-bright-yellow: var(--ink-warning, #8a6f33);
+  --ict-ansi-bright-blue: var(--ink-hue-indigo, #565e7e);
+  --ict-ansi-bright-magenta: var(--ink-hue-burgundy, #7c5570);
+  --ict-ansi-bright-cyan: var(--ink-hue-cyan, #4e6b73);
+  --ict-ansi-bright-white: var(--ink-paper, #171a20);
+}
+
+/* The dark room. Both still read the --ink-* channel first, so inside a
+   theme that maps them this block changes nothing. */
+.theme-dark .ict-root, .theme-dark .ict-settings, .theme-dark .ict-menu, .theme-dark .ict-modal {
+  --ict-cursor: var(--ink-marker, #ff5a2d);
+  --ict-marker: var(--ink-marker, #ff5a2d);
+  --ict-marker-fill: var(--ink-marker-fill, #ff5a2d);
+  --ict-marker-up: var(--ink-marker-fill-hover, #ff7248);
+  --ict-on-marker: var(--ink-on-marker, #180e08);
+  --ict-selection: var(--ink-marker-selection, rgba(255, 90, 45, 0.25));
+  --ict-selection-inactive: var(--ink-marker-selection, rgba(255, 90, 45, 0.16));
+  --ict-search-match: var(--ink-hue-yellow, #c2a35c);
+  --ict-search-active: var(--ink-marker, #ff5a2d);
+  --ict-destructive-text: var(--ink-destructive-text, #e36350);
+  --ict-hand-ink: var(--ink-hand-ink, var(--ink-marker, #ff5a2d));
+  --ict-ansi-black: var(--ink-3, #16181a);
+  --ict-ansi-red: var(--ink-destructive-text, #e36350);
+  --ict-ansi-green: var(--ink-success-dot, #7d9a7f);
+  --ict-ansi-yellow: var(--ink-hue-yellow, #c2a35c);
+  --ict-ansi-blue: var(--ink-hue-indigo, #8087a6);
+  --ict-ansi-magenta: var(--ink-hue-burgundy, #a87795);
+  --ict-ansi-cyan: var(--ink-hue-cyan, #7a99a1);
+  --ict-ansi-white: var(--ink-paper-dim, #c9c4b8);
+  --ict-ansi-bright-black: var(--ink-paper-faint, #8e897d);
+  --ict-ansi-bright-red: var(--ink-marker, #ff5a2d);
+  --ict-ansi-bright-green: var(--ink-success-dot, #7d9a7f);
+  --ict-ansi-bright-yellow: var(--ink-warning, #c2a35c);
+  --ict-ansi-bright-blue: var(--ink-hue-indigo, #8087a6);
+  --ict-ansi-bright-magenta: var(--ink-hue-burgundy, #a87795);
+  --ict-ansi-bright-cyan: var(--ink-hue-cyan, #7a99a1);
+  --ict-ansi-bright-white: var(--ink-paper, #f6f3ec);
+}
+
+/* ------------------------------------------------------------ 0.2 voices */
+
+.ict-kicker {
+  font-family: var(--ict-mono);
+  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  font-size: 10.5px;
+  color: var(--ict-faint);
+}
+
+.ict-hand {
+  font-family: var(--ict-hand);
+  color: var(--ict-hand-ink);
+  font-size: 1.15em;
+  line-height: 1.3;
+}
+
+.ict-btn {
+  font-family: var(--ict-body);
+  font-size: var(--font-ui-small);
+  color: var(--ict-fg);
+  background: transparent;
+  border: 1px solid var(--ict-hairline);
+  border-radius: var(--ict-r-control);
+  padding: 4px 12px;
+  cursor: pointer;
+  box-shadow: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.4;
+}
+.ict-btn:hover { background: var(--ict-wash); }
+.ict-btn:focus-visible { outline: 2px solid var(--ict-marker); outline-offset: 2px; }
+.ict-btn-icon { padding: 4px; }
+.ict-btn-icon .svg-icon { width: 14px; height: 14px; }
+.ict-btn-marker {
+  background: var(--ict-marker-fill);
+  color: var(--ict-on-marker);
+  border-color: transparent;
+}
+.ict-btn-marker:hover { background: var(--ict-marker-up); }
+.ict-btn-marker .svg-icon { width: 14px; height: 14px; }
+
+/* ------------------------------------------------------------ 1 the pane */
+
+.ict-host {
+  padding: 0;
+  overflow: hidden;
+  background: var(--ict-bg);
+}
+
+.ict-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: var(--ict-bg);
+  color: var(--ict-fg);
+  transition: box-shadow 160ms var(--ict-ease);
+}
+.ict-root.ict-bell { box-shadow: inset 0 0 0 2px var(--ict-marker); }
+
+.ict-surface {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 8px 0 4px 12px;
+}
+.ict-surface .xterm { height: 100%; }
+.ict-surface .xterm .xterm-viewport { background-color: var(--ict-bg); }
+.ict-surface .xterm .xterm-viewport::-webkit-scrollbar { width: 8px; }
+.ict-surface .xterm .xterm-viewport::-webkit-scrollbar-thumb {
+  background: var(--ict-hairline);
+  border-radius: var(--ict-r-control);
+}
+
+/* ------------------------------------------------------------ 2 find bar */
+
+.ict-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--ict-hairline);
+  background: var(--ict-surface);
+}
+.ict-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--ict-mono);
+  font-size: var(--font-ui-small);
+  color: var(--ict-fg);
+  background: var(--ict-input);
+  border: 1px solid var(--ict-hairline);
+  border-radius: var(--ict-r-control);
+  padding: 4px 8px;
+}
+.ict-search-input:focus { outline: none; border-color: var(--ict-marker); box-shadow: none; }
+.ict-search-count {
+  font-family: var(--ict-mono);
+  font-size: 11px;
+  color: var(--ict-dim);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------ 3 exit row */
+
+.ict-exit, .ict-notice {
+  border-top: 1px solid var(--ict-hairline);
+  padding: 12px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--ict-surface);
+}
+.ict-exit-failed .ict-exit-kicker { color: var(--ict-destructive-text); }
+.ict-exit-detail {
+  margin: 0;
+  padding: 8px 12px;
+  font-family: var(--ict-mono);
+  font-size: 12px;
+  color: var(--ict-dim);
+  background: var(--ict-input);
+  border: 1px solid var(--ict-hairline);
+  border-radius: var(--ict-r-control);
+  white-space: pre-wrap;
+  max-height: 160px;
+  overflow: auto;
+}
+.ict-exit-actions { display: flex; gap: 8px; }
+.ict-notice-body {
+  font-family: var(--ict-body);
+  font-size: var(--font-ui-small);
+  color: var(--ict-dim);
+  max-width: 60ch;
+}
+.ict-notice .ict-btn { align-self: flex-start; }
+
+/* ------------------------------------------------------------ 4 launcher */
+
+.ict-tree-launcher {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: var(--size-2-2);
+  height: auto;
+  font: inherit;
+}
+.ict-tree-launcher:focus-visible { outline: 2px solid var(--ict-marker); outline-offset: 1px; }
+
+/* ------------------------------------------------------------ 5 settings */
+
+.ict-settings-section {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 24px 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--ict-hairline);
+}
+.ict-settings-index { font-family: var(--ict-mono); font-size: 11px; color: var(--ict-marker); }
+.ict-settings-name { font-family: var(--ict-body); font-weight: 600; }
+.ict-settings-profiles { flex-direction: column; align-items: stretch; }
+.ict-settings-profiles .setting-item-control { justify-content: flex-start; }
+.ict-profiles { display: flex; flex-direction: column; gap: 12px; width: 100%; margin-top: 12px; }
+.ict-profile {
+  border: 1px solid var(--ict-hairline);
+  border-radius: var(--ict-r-subtle);
+  padding: 4px 12px 8px;
+}
+.ict-profile .setting-item { border-top: 0; padding: 8px 0; }
+.ict-profile-head { padding: 8px 0 0; }
+.ict-profile-add .setting-item-control { justify-content: flex-start; }
+.ict-modal-error { color: var(--ict-destructive-text); font-size: var(--font-ui-small); margin-bottom: 8px; }
