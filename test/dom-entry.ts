@@ -38,6 +38,7 @@ const read = (t: string) => cs.getPropertyValue(t);
 const palette = readPalette(read);
 const term = new Terminal({ allowProposedApi: true, fontFamily: readFontFamily(read, ''), theme: palette });
 term.open(refs.surface);
+refs.exit.setBack('Back to chat');
 refs.exit.show({ code: 0, signal: null, ready: true, detail: '' });
 refs.search.show();
 term.write('ICOR_DOM_OK', () => {

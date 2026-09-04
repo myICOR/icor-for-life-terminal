@@ -116,6 +116,7 @@ All under "ICOR for Life - Terminal" in the command palette.
 | Clear terminal | Same as Cmd+K in the pane |
 | Find in terminal | Opens the find bar; same as Cmd+F in the pane |
 | Restart the shell in this terminal | Ends the process and starts the profile again |
+| Continue this Claude session in AI Chat | Asks the CLI to exit, waits for it, then turns this pane into an ICOR for Life - AI Chat pane on the same session |
 
 The terminal icon in the ribbon and in the file explorer's button row opens
 a menu with the same launchers and one entry per extra profile.
@@ -163,10 +164,15 @@ is not fussiness: two live processes writing one Claude session file do not
 collide, they fork it silently, and the next resume follows one branch and
 loses the other. One pane per session is the only safe shape.
 
-The pane state is `{ launch, cwd, profile, resumeSessionId, title }`.
+The pane state is `{ resumeSessionId, cwd, launch, profile, returnTo }`.
 Another plugin can hand a session over by setting that state on a leaf
-(`leaf.setViewState({ type: 'icor-for-life-terminal', state: { launch: 'claude', resumeSessionId, cwd } })`).
-The ICOR for Life - AI Chat side of that hand-off is a later release.
+(`leaf.setViewState({ type: 'icor-for-life-terminal', state: { launch: 'claude', resumeSessionId, cwd, returnTo } })`).
+With a `returnTo`, the pane shows `Back to chat` in its header while the CLI
+runs and in the exit row after it ends; the button asks the CLI to exit
+(`/exit`), waits for it (10 s ceiling), then hands the same leaf back with
+`returnTo`. Never while the process is alive. The plugin exposes
+`holdsSession(id)` for the other side's check. The whole contract, stated
+once: [docs/handoff.md](docs/handoff.md).
 
 ## Restore on reload
 

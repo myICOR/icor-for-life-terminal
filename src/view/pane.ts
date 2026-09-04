@@ -96,8 +96,12 @@ export interface ExitRow {
   detail: HTMLElement;
   restart: HTMLButtonElement;
   close: HTMLButtonElement;
+  /** The hand-off button; hidden unless the pane has somewhere to return to. */
+  back: HTMLButtonElement;
   show(state: ExitState): void;
   hide(): void;
+  /** Shows `Back to chat` (or whatever label) as the marker action, or hides it again. */
+  setBack(label: string | null): void;
 }
 
 /** The kicker line: what happened, in the numbers the process reported. */
@@ -126,6 +130,8 @@ export function buildExitRow(parent: HTMLElement, icon?: IconSetter): ExitRow {
   const detail = el.createEl('pre', { cls: 'ict-exit-detail' });
   detail.hidden = true;
   const actions = el.createDiv({ cls: 'ict-exit-actions' });
+  const back = button(actions, { label: 'Back to chat' });
+  back.hidden = true;
   const restart = button(actions, { label: 'Restart', cls: 'ict-btn-marker' });
   if (icon) {
     restart.setText('');
@@ -140,6 +146,20 @@ export function buildExitRow(parent: HTMLElement, icon?: IconSetter): ExitRow {
     detail,
     restart,
     close,
+    back,
+    setBack(label) {
+      /* One marker action per row: the way back when there is one, else Restart. */
+      back.hidden = label === null;
+      if (label !== null) {
+        back.setText('');
+        if (icon) icon(back, 'message-square');
+        back.createSpan({ text: label });
+        back.setAttr('aria-label', label);
+        back.title = label;
+      }
+      back.toggleClass('ict-btn-marker', label !== null);
+      restart.toggleClass('ict-btn-marker', label === null);
+    },
     show(state) {
       kicker.setText(exitKicker(state));
       note.setText(exitNote(state));

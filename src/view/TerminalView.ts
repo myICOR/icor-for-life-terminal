@@ -13,7 +13,7 @@ import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { basename } from 'node:path';
 import process from 'node:process';
-import { TERMINAL_ICON, VIEW_TYPE_TERMINAL } from '../constants';
+import { CHAT_PLUGIN_ID, CHAT_VIEW_TYPE, TERMINAL_ICON, VIEW_TYPE_TERMINAL } from '../constants';
 import { buildChildEnv, splitPathLines } from '../env';
 import { compileAllowList, defaultAllowList, passesToObsidian, splitHotkeyLines, virtualKey } from '../keymap';
 import type { CompiledAllowList } from '../keymap';
@@ -23,28 +23,15 @@ import { PtyProcess } from '../pty/PtyProcess';
 import { buildPane } from './pane';
 import type { PaneRefs } from './pane';
 import { readFontFamily, readPalette } from './theme';
+import { EXIT_CEILING_MS, exitThenSwap, parseTerminalState } from './handoff';
+import type { LaunchKind, ReturnTo, TerminalViewState } from './handoff';
 import { externalLaunch, openExternalTerminal } from '../platform/external';
 import { PromptModal } from './PromptModal';
 import type TerminalPlugin from '../main';
 
-export type LaunchKind = 'shell' | 'claude';
+export type { LaunchKind, ReturnTo, TerminalViewState } from './handoff';
 
-/**
- * The leaf state. Persisted by Obsidian into workspace.json, and the shape
- * another plugin hands over with `leaf.setViewState` when it wants this pane
- * to pick up a Claude session: `{ launch: 'claude', resumeSessionId, cwd }`.
- */
-export interface TerminalViewState {
-  cwd?: string;
-  launch?: LaunchKind;
-  profile?: string;
-  resumeSessionId?: string;
-  title?: string;
-  /** Wall-clock ms when the pane was opened; a restore after a reload is older than a fresh open. */
-  startedAt?: number;
-}
-
-const STATE_KEYS: (keyof TerminalViewState)[] = ['cwd', 'launch', 'profile', 'resumeSessionId', 'title', 'startedAt'];
+const BACK_LABEL = 'Back to chat';
 
 /** Older than this at setState time means Obsidian restored the pane rather than the user opening it. */
 const RESTORE_AGE_MS = 5000;
@@ -78,6 +65,8 @@ export class TerminalView extends ItemView {
   private scopePushed = false;
   private readonly holder = `terminal-${++holderCounter}`;
   private heldId: string | null = null;
+  private backAction: HTMLElement | null = null;
+  private swapping = false;
 
   constructor(leaf: WorkspaceLeaf, private readonly plugin: TerminalPlugin) {
     super(leaf);
@@ -142,21 +131,14 @@ export class TerminalView extends ItemView {
   }
 
   override async setState(state: unknown, result: ViewStateResult): Promise<void> {
-    if (state && typeof state === 'object') {
-      const s = state as Record<string, unknown>;
-      for (const k of STATE_KEYS) {
-        const v = s[k];
-        if (k === 'startedAt') {
-          if (typeof v === 'number') this.state.startedAt = v;
-        } else if (k === 'launch') {
-          if (v === 'shell' || v === 'claude') this.state.launch = v;
-        } else if (typeof v === 'string') {
-          this.state[k] = v;
-        }
-      }
-    }
+    /* Parsed, never trusted: a leaf state arrives from workspace.json or from
+       another plugin's setViewState, and a mistyped id must not reach argv. */
+    const parsed = parseTerminalState(state);
+    Object.assign(this.state, parsed.state);
+    if (parsed.rejected.length) new Notice(`Terminal: ignored in the pane state: ${parsed.rejected.join('; ')}`);
     await super.setState(state, result);
     this.refreshHeader();
+    this.mountBackAction();
     this.ensureLaunched();
   }
 
@@ -472,6 +454,7 @@ export class TerminalView extends ItemView {
       pty.onData((chunk) => this.onOutput(chunk)),
       pty.onExit((exit) => {
         this.releaseHeld();
+        refs.exit.setBack(this.returnTarget() ? BACK_LABEL : null);
         refs.exit.show({ code: exit.code, signal: exit.signal, ready: exit.ready, detail: exit.stderr });
         this.scheduleFit();
       }),
@@ -577,6 +560,71 @@ export class TerminalView extends ItemView {
     if (!refs) return;
     this.registerDomEvent(refs.exit.restart, 'click', () => this.restart());
     this.registerDomEvent(refs.exit.close, 'click', () => this.leaf.detach());
+    this.registerDomEvent(refs.exit.back, 'click', () => void this.backToChat());
+  }
+
+  /* ------------------------------------------------------------- hand-off */
+
+  /**
+   * Where `Back to chat` goes. The target handed over with the state wins;
+   * a Claude pane opened on a known id without one (the terminal's own
+   * `Resume a Claude session by ID`) can still continue in AI Chat, so the
+   * target is derived from the id. A fresh `claude` with no id yet has
+   * nowhere to go: the id is only printed when the CLI exits.
+   */
+  returnTarget(): ReturnTo | null {
+    if (this.state.launch !== 'claude') return null;
+    if (this.state.returnTo) return this.state.returnTo;
+    const id = this.state.resumeSessionId;
+    if (!id) return null;
+    return { type: CHAT_VIEW_TYPE, state: { resumeSessionId: id, provider: 'claude' } };
+  }
+
+  canContinueInChat(): boolean {
+    return this.returnTarget() !== null && !this.swapping;
+  }
+
+  /** The header action while the CLI runs; the exit row carries the same button after. */
+  private mountBackAction(): void {
+    if (this.backAction || !this.returnTarget()) return;
+    this.backAction = this.addAction('message-square', BACK_LABEL, () => void this.backToChat());
+  }
+
+  /** Is the view type registered right now, so the swap lands on a real pane and not a blank one. */
+  private viewTypeKnown(type: string): boolean {
+    const registry = (this.app as unknown as { viewRegistry?: { getViewCreatorByType?: (t: string) => unknown } }).viewRegistry;
+    const probe = registry?.getViewCreatorByType;
+    if (typeof probe !== 'function') return true;
+    return !!probe.call(registry, type);
+  }
+
+  /**
+   * `/exit` to the CLI, wait for it to end (10 s ceiling), then hand the SAME
+   * leaf back to the view named in the state. Never swaps while the process
+   * is alive: two writers on one session file fork it.
+   */
+  async backToChat(): Promise<void> {
+    const target = this.returnTarget();
+    if (!target || this.swapping) return;
+    if (!this.viewTypeKnown(target.type)) {
+      const what = target.type === CHAT_VIEW_TYPE ? `ICOR for Life - AI Chat (${CHAT_PLUGIN_ID}) is not enabled` : `no view of type ${target.type} is registered`;
+      new Notice(`Terminal: cannot go back, ${what}.`);
+      return;
+    }
+    this.swapping = true;
+    this.backAction?.addClass('is-disabled');
+    try {
+      const result = await exitThenSwap(this.pty, async () => {
+        this.teardownPty();
+        await this.leaf.setViewState({ type: target.type, active: true, state: target.state });
+      });
+      if (result === 'timeout') {
+        new Notice(`Terminal: Claude did not exit within ${EXIT_CEILING_MS / 1000} s. It is still running; end it in the pane, then go back.`);
+      }
+    } finally {
+      this.swapping = false;
+      this.backAction?.removeClass('is-disabled');
+    }
   }
 
   private flashBell(): void {

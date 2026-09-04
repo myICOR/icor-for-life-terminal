@@ -55,6 +55,7 @@ test('the pane mounts, every control is a labelled <button>, and the tokens reso
           bg: getComputedStyle(root).backgroundColor,
           kicker: getComputedStyle(exit.querySelector('.ict-exit-kicker')).color,
           exitBg: getComputedStyle(exit).backgroundColor,
+          markers: root.querySelectorAll('.ict-exit .ict-btn-marker').length,
           restartBg: getComputedStyle(root.querySelector('.ict-btn-marker')).backgroundColor,
           restartFg: getComputedStyle(root.querySelector('.ict-btn-marker')).color,
           font: cs.getPropertyValue('--ict-mono').trim(),
@@ -62,7 +63,9 @@ test('the pane mounts, every control is a labelled <button>, and the tokens reso
       })()`);
       const room = dark ? 'stock dark' : 'stock light';
       assert.equal(facts.attr, 'icor-for-life-terminal', `${room}: root carries the INKLINE declaration`);
-      assert.ok(facts.buttonTags.length >= 5, `${room}: the pane has its controls`);
+      assert.ok(facts.buttonTags.length >= 6, `${room}: the pane has its controls`);
+      assert.ok(facts.buttonLabels.includes('Back to chat'), `${room}: the exit row carries the way back when there is one`);
+      assert.equal(facts.markers, 1, `${room}: exactly one marker action in the exit row`);
       assert.ok(facts.buttonTags.every((t) => t === 'BUTTON'), `${room}: every control is a <button>`);
       assert.ok(facts.buttonLabels.every((l) => l.length > 0), `${room}: every control has an accessible name`);
       assert.equal(facts.pretending, 0, `${room}: nothing pretends to be a button`);

@@ -19,7 +19,7 @@ function walk(dir, exts) {
   return out;
 }
 
-const prose = ['README.md', 'SECURITY.md', 'THIRD-PARTY-NOTICES.md', 'manifest.json', 'src/terminal.css', 'esbuild.config.mjs', 'eslint.config.mjs']
+const prose = ['README.md', 'SECURITY.md', 'docs/handoff.md', 'THIRD-PARTY-NOTICES.md', 'manifest.json', 'src/terminal.css', 'esbuild.config.mjs', 'eslint.config.mjs']
   .map((f) => resolve(repo, f))
   .concat(walk(resolve(repo, 'src'), ['.ts', '.py']), walk(resolve(repo, 'test'), ['.mjs', '.ts', '.html']), walk(resolve(repo, 'tools'), ['.mjs']));
 

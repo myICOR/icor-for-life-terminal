@@ -90,6 +90,16 @@ export default class TerminalPlugin extends Plugin {
     this.addTerminalCommand('clear-terminal', 'Clear terminal', (v) => v.clear());
     this.addTerminalCommand('find-in-terminal', 'Find in terminal', (v) => v.openSearch());
     this.addTerminalCommand('restart-terminal', 'Restart the shell in this terminal', (v) => v.restart());
+    this.addCommand({
+      id: 'continue-in-chat',
+      name: 'Continue this Claude session in AI Chat',
+      checkCallback: (checking) => {
+        const view = this.activeTerminal();
+        if (!view?.canContinueInChat()) return false;
+        if (!checking) void view.backToChat();
+        return true;
+      },
+    });
 
     this.app.workspace.onLayoutReady(() => this.mountTreeLauncher());
     this.registerEvent(this.app.workspace.on('layout-change', () => this.mountTreeLauncher()));
@@ -145,7 +155,20 @@ export default class TerminalPlugin extends Plugin {
 
   /** The pane holding a Claude session id, if any. */
   viewHolding(sessionId: string): TerminalView | null {
-    return this.views.find((v) => v.heldSessionId === sessionId) ?? null;
+    const id = normaliseSessionId(sessionId) ?? sessionId;
+    return this.views.find((v) => v.heldSessionId === id) ?? null;
+  }
+
+  /**
+   * Public, for the other side of the hand-off (docs/handoff.md): true while
+   * a terminal pane of this plugin has a live `claude --resume <id>` on that
+   * id. AI Chat asks before it resumes; a false here is the go-ahead.
+   * `app.plugins.plugins['icor-for-life-terminal']?.holdsSession(id)`.
+   */
+  holdsSession(sessionId: string): boolean {
+    const id = normaliseSessionId(sessionId);
+    if (!id) return false;
+    return this.held.holderOf(id) !== null;
   }
 
   private activeFileDir(): string | null {
