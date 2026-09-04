@@ -68,12 +68,35 @@ test('the shipped stylesheet carries none of the findings the directory scanner 
   assert.match(shipped, /\.xterm \.xterm-dim \{[^}]*opacity: 1;/, 'the dim reset is kept without the flag');
   assert.match(shipped, /Copyright \(c\) 2014 The xterm\.js authors/, 'xterm.css ships with its licence header');
   /* 0.1.0 review: every multi-value `text-decoration` shorthand was flagged as
-     only partially supported at the floor. Split into longhands at assembly. */
-  const multi = [...shipped.matchAll(/text-decoration:\s*([^;]+);/g)].filter((m) => m[1].trim().split(/\s+/).length > 1);
-  assert.deepEqual(multi.map((m) => m[0]), [], 'a multi-value text-decoration shorthand survived assembly');
-  assert.match(shipped, /\.xterm-underline-3 \{ text-decoration-line: underline; text-decoration-style: wavy; \}/, 'the wavy underline rides the longhands');
-  assert.match(shipped, /\.xterm-overline\.xterm-underline-2 \{ text-decoration-line: overline underline; text-decoration-style: double; \}/, 'overline plus double underline rides the longhands');
+     only partially supported at the floor. 0.1.1 split them into longhands and
+     the review flagged the `text-decoration-style` longhands the same way. So
+     0.1.2 keeps only the plain single-keyword forms: every styled variant is
+     mapped to a plain underline at assembly, and no longhand remains. */
+  assert.doesNotMatch(shipped, /text-decoration-style/, 'a text-decoration-style longhand survived assembly');
+  assert.doesNotMatch(shipped, /text-decoration-line/, 'a text-decoration-line longhand survived assembly');
+  const decorations = [...shipped.matchAll(/text-decoration:\s*([^;]+);/g)].map((m) => m[1].trim());
+  assert.ok(decorations.length >= 12, `expected the xterm decoration rules, found ${decorations.length}`);
+  const notPlain = decorations.filter((v) => !['underline', 'overline', 'line-through'].includes(v));
+  assert.deepEqual(notPlain, [], 'a text-decoration value other than the three plain keywords survived assembly');
+  for (const n of [1, 2, 3, 4, 5]) {
+    assert.match(shipped, new RegExp(`\\.xterm-underline-${n} \\{ text-decoration: underline; \\}`), `underline-${n} is a plain underline`);
+    assert.match(shipped, new RegExp(`\\.xterm-overline\\.xterm-underline-${n} \\{ text-decoration: underline; \\}`), `overline plus underline-${n} is a plain underline`);
+  }
+  assert.match(shipped, /\.xterm-overline \{\s*text-decoration: overline;/, 'the single-keyword overline shorthand is kept');
   assert.match(shipped, /\.xterm-strikethrough \{\s*text-decoration: line-through;/, 'the single-keyword strike shorthand is kept');
+});
+
+/* 0.1.1 review: "Direct Filesystem Access: Uses the Node.js fs module". The
+   plugin reads no file of its own; the two executable probes spawn the
+   candidate instead. Nothing in src may import fs again. */
+test('the plugin source imports nothing from node:fs', () => {
+  for (const f of walk(resolve(repo, 'src'), ['.ts'])) {
+    const s = readFileSync(f, 'utf8');
+    assert.doesNotMatch(s, /from ['"](node:)?fs(\/promises)?['"]/, `${f} imports fs`);
+    assert.doesNotMatch(s, /require\(['"](node:)?fs['"]\)/, `${f} requires fs`);
+  }
+  const main = read('main.js');
+  assert.doesNotMatch(main, /require\("(node:)?fs"\)/, 'the bundle requires fs');
 });
 
 test('source carries nothing the scanner reads as obfuscation or self-modification', () => {

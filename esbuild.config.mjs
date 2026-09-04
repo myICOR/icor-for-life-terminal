@@ -40,23 +40,27 @@ const production = process.argv[2] === 'production';
  *     not occur in the runtime at all; the flag is dropped, the rule kept.
  *   - `text-decoration: double underline` and the other shorthands that carry
  *     a style keyword or two lines (the `.xterm-underline-N` and
- *     `.xterm-overline` rules): the directory's baseline check reads the
- *     multi-value shorthand as only partially supported at the declared
- *     floor (0.1.0 review, 2026-09-04). The longhands `text-decoration-line`
- *     and `text-decoration-style` say exactly the same thing and have been
- *     complete in Chromium since 57, so the shorthand is split; a
- *     single-keyword shorthand (`underline`, `overline`, `line-through`)
- *     passes and is kept as is. */
-const DECORATION_STYLES = new Set(['solid', 'double', 'dotted', 'dashed', 'wavy']);
+ *     `.xterm-overline.xterm-underline-N` rules): the directory's baseline
+ *     check reads a styled or two-line decoration as only partially
+ *     supported at the declared floor, in the shorthand (0.1.0 review) and
+ *     in the `text-decoration-line` / `text-decoration-style` longhands
+ *     alike (0.1.1 review, both 2026-09-04). Only the plain single-keyword
+ *     forms (`underline`, `overline`, `line-through`) pass, so every
+ *     multi-value declaration is mapped to ONE plain keyword: `underline`
+ *     when the value carries it, else the first line keyword. The cost is
+ *     confined to the DOM renderer (the fallback behind WebGL): it draws
+ *     double, wavy, dotted and dashed underlines as a plain underline and
+ *     an overline plus underline as the underline alone. The WebGL renderer,
+ *     the default, draws decorations on its canvas and never reads these
+ *     rules. */
+const DECORATION_LINES = ['underline', 'line-through', 'overline'];
 
-export function splitTextDecoration(declaration, value) {
+export function plainTextDecoration(declaration, value) {
   const tokens = value.trim().split(/\s+/);
   if (tokens.length < 2) return declaration;
-  const lines = tokens.filter((t) => !DECORATION_STYLES.has(t));
-  const styles = tokens.filter((t) => DECORATION_STYLES.has(t));
-  const out = [`text-decoration-line: ${lines.join(' ')};`];
-  if (styles.length > 0) out.push(`text-decoration-style: ${styles[0]};`);
-  return out.join(' ');
+  const line = DECORATION_LINES.find((l) => tokens.includes(l));
+  if (!line) throw new Error(`text-decoration without a line keyword: ${value}`);
+  return `text-decoration: ${line};`;
 }
 
 export function transformUpstreamCss(css) {
@@ -67,7 +71,7 @@ export function transformUpstreamCss(css) {
     .replace(/\.xterm \.xterm-accessibility-tree:not\(\.debug\) \*::selection \{[^}]*\}\s*/g, '')
     .replace(/\.xterm-dim \{([^}]*?)opacity:\s*1\s*!important;/g, '.xterm .xterm-dim {$1opacity: 1;')
     .replace(/font-size:\s*11px\s*!important;/g, 'font-size: 11px;')
-    .replace(/text-decoration:\s*([^;]+);/g, splitTextDecoration);
+    .replace(/text-decoration:\s*([^;]+);/g, plainTextDecoration);
 }
 
 export function assembleStyles() {

@@ -30,9 +30,12 @@ async function mount(chrome, dark) {
 }
 
 /* The DOM renderer (the fallback behind WebGL) draws underline styles and
- * strikethrough purely from xterm's classes, so the split into longhands has
- * to resolve to the same computed decoration the shorthand gave. */
-test('xterm decoration classes still draw after the shorthand split', async () => {
+ * strikethrough purely from xterm's classes. Since 0.1.2 the stylesheet
+ * carries only the plain keywords (the directory's baseline check flags
+ * every styled variant), so every underline class, styled or not, and every
+ * overline plus underline pair, has to resolve to a plain solid underline,
+ * and overline alone and strikethrough keep their own line. */
+test('xterm decoration classes resolve to the plain decorations the stylesheet promises', async () => {
   const chrome = await Chrome.launch();
   try {
     await mount(chrome, false);
@@ -54,18 +57,17 @@ test('xterm decoration classes still draw after the shorthand split', async () =
         u4: probe('xterm-underline-4'),
         u5: probe('xterm-underline-5'),
         o: probe('xterm-overline'),
+        ou1: probe('xterm-overline xterm-underline-1'),
         ou3: probe('xterm-overline xterm-underline-3'),
         s: probe('xterm-strikethrough'),
         plain: probe(''),
       };
     })()`);
-    assert.deepEqual(facts.u1, { line: 'underline', style: 'solid' });
-    assert.deepEqual(facts.u2, { line: 'underline', style: 'double' });
-    assert.deepEqual(facts.u3, { line: 'underline', style: 'wavy' });
-    assert.deepEqual(facts.u4, { line: 'underline', style: 'dotted' });
-    assert.deepEqual(facts.u5, { line: 'underline', style: 'dashed' });
+    const underline = { line: 'underline', style: 'solid' };
+    for (const k of ['u1', 'u2', 'u3', 'u4', 'u5']) assert.deepEqual(facts[k], underline, `${k} is a plain underline`);
     assert.deepEqual(facts.o, { line: 'overline', style: 'solid' });
-    assert.deepEqual(facts.ou3, { line: 'underline overline', style: 'wavy' });
+    assert.deepEqual(facts.ou1, underline, 'overline plus underline draws the underline alone');
+    assert.deepEqual(facts.ou3, underline, 'overline plus wavy underline draws a plain underline');
     assert.deepEqual(facts.s, { line: 'line-through', style: 'solid' });
     assert.deepEqual(facts.plain, { line: 'none', style: 'solid' }, 'the control span carries no decoration');
   } finally {

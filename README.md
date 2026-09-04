@@ -108,6 +108,13 @@ against it, measured on this codebase rather than promised.
 - Shell integration decorations (command markers, per-command navigation).
 - Process-name tab titles. Tabs show the shell and the folder, or the name
   you gave them.
+- Styled underlines in the DOM renderer. The WebGL renderer (the default)
+  draws double, wavy, dotted and dashed underlines and overline plus
+  underline on its canvas, exactly as the program asked. The DOM renderer,
+  the fallback when WebGL is unavailable, draws every underline style as a
+  plain underline and an overline plus underline as the underline alone,
+  because the stylesheet keeps only the decorations the directory's
+  baseline check accepts (see "What the directory review shows").
 
 ## Commands
 
@@ -236,8 +243,38 @@ release with those three assets and the notes from
 `docs/releases/<version>.md`. The manual `gh release create` stays the
 fallback and a release cut that way says so in its notes.
 
+## What the directory review shows
+
+The Obsidian directory runs an automated review on every release. Its
+report on this plugin, read against the code:
+
+- **Two behaviour notes, process spawning and clipboard use.** Both are
+  what a terminal is. A terminal pane starts your shell, so the plugin
+  spawns processes; copy and paste on your key are clipboard use. Each is
+  described in the disclosure section above and, with the file to read
+  behind every claim, in `SECURITY.md`. The plugin itself reads no file
+  through Node's `fs` module: it finds `claude` and the Python interpreter
+  by running each candidate with `--version`.
+- **"Not a recognized license."** Correct, and on purpose: the plugin is
+  source-available, not open source. The "Licence" section below says what
+  that allows.
+- **Assets are attested.** `main.js`, `manifest.json` and `styles.css` on
+  every release carry GitHub artifact attestations, and the review rebuilds
+  `main.js` from the tagged source and gets the same bytes (verify a copy
+  with `gh attestation verify main.js --repo myICOR/icor-for-life-terminal`).
+- **The stylesheet** carries only the text decorations the review's
+  baseline accepts (plain `underline`, `overline`, `line-through`); the
+  cost, styled underlines in the DOM renderer only, is listed under
+  "Does not match yet".
+
 ## Licence
 
 Source-available under the ICOR for Life Source-Available License (Code),
-Version 1.0; see `LICENSE`. Third-party components are MIT; see
+Version 1.0; the full text is in `LICENSE`. In plain words: with an ICOR
+for Life / myICOR Inner Circle membership, or installed from the Obsidian
+directory, you may install and run the plugin in your own vaults, read and
+study its source, and modify it for your own personal use. You may not
+redistribute it or a modified version to anyone else, in source or built
+form, and you may not sell it or use it to provide a product or service to
+others. Third-party components (xterm.js and its addons) are MIT; see
 `THIRD-PARTY-NOTICES.md`.

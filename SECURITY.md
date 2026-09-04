@@ -66,11 +66,19 @@ because a directory release can carry only `main.js`, `manifest.json` and
 `styles.css`; `test/frames.test.mjs` asserts the string in the bundle
 contains no `environ` access.
 
-**It reads files outside the vault.** A shell reads whatever the user can
-read. The plugin itself also probes for the `claude` executable on PATH
-(`src/main.ts`, `claudeExecutable`) and resolves the vault's folder on
-disk to use as the working directory. Nothing else is read by the plugin
-code; everything else is the shell, under your control.
+**It probes two executables by running them.** `src/main.ts`
+(`isExecutable`) calls `child_process.spawnSync` with a candidate path,
+the fixed argument list `['--version']`, no shell, `stdio: 'ignore'` and a
+1.5 s timeout; a spawn error means "not found". The only names ever
+probed are `claude` (unless you set an explicit path) and the Python
+interpreter from settings, each looked up folder by folder on the child's
+own PATH; a verdict is remembered per path until settings are saved. This
+is how the plugin resolves executables without importing Node's `fs`
+module: since 0.1.2 the plugin source imports nothing from `fs`
+(`test/hygiene.test.mjs` pins it), and the only path the plugin reads is
+the vault's folder on disk, through Obsidian's own adapter, to use as the
+working directory. Everything else that touches the file system is the
+shell, under your control.
 
 **It hands the child an environment.** `src/env.ts` copies the process
 environment, repairs PATH (developer tool folders in front, plus the folders
@@ -135,8 +143,9 @@ spawns. This is a data-integrity guard, not a security boundary.
 
 ## What a review should look at
 
-1. That `spawn` is never given `shell: true` and never a string built from
-   user input. (`grep -n "shell:" src` finds nothing.)
+1. That `spawn` and `spawnSync` are never given `shell: true` and never a
+   string built from user input. (`grep -n "shell:" src` finds nothing;
+   `grep -n spawnSync src` finds the one `--version` probe.)
 2. That the helper string in `main.js` is byte-identical to
    `src/pty/helper.py` (`npm run build` regenerates it from the file).
 3. That every `CLAUDE*` variable is scrubbed (`test/env.test.mjs`).
@@ -147,13 +156,16 @@ spawns. This is a data-integrity guard, not a security boundary.
    review `src/` and rebuild with `npm run build` to compare.
 7. That the only clipboard access in `src/` is the opt-in copy-on-select
    write (`grep -n clipboard src`).
+8. That nothing in `src/` imports `fs` (`grep -rn "node:fs" src` finds
+   nothing; `test/hygiene.test.mjs` pins it).
 
 ## Obsidian's own guidance
 
 This plugin declares `isDesktopOnly: true`. The Obsidian developer policies
 require disclosure of network use and of access to files outside the vault;
 the README carries both, and this document is the long form. The
-directory's automated review lists three behaviours for this plugin, file
-system access outside the vault, process spawning (the shell) and clipboard
-use; all three are expected for a terminal and each is described above with
-the file to read.
+directory's automated review lists two behaviours for this plugin, process
+spawning (the shell, and the two `--version` probes) and clipboard use;
+both are what a terminal is and each is described above with the file to
+read. The file system warning of the 0.1.1 review is gone with the `fs`
+import.

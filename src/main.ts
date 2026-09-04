@@ -5,7 +5,7 @@
 
 import { FileSystemAdapter, Menu, Notice, Plugin, setIcon } from 'obsidian';
 import type { WorkspaceLeaf } from 'obsidian';
-import { existsSync, statSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import process from 'node:process';
 import { INK_PLUGIN_ATTR, INK_PLUGIN_NAME, TERMINAL_ICON, VIEW_TYPE_TERMINAL } from './constants';
@@ -35,12 +35,28 @@ export interface OpenOptions {
   where?: OpenLocation;
 }
 
-function isFile(path: string): boolean {
+/* Is there an executable at `path`? Answered by running it with `--version`,
+ * never by reading the file system: the plugin imports nothing from `fs`
+ * (0.1.1 directory review). The argument list is fixed, no shell is
+ * involved, and a spawn error (ENOENT, EACCES, a folder) means "not found".
+ * Only the two names the plugin resolves are ever probed: `claude` and the
+ * configured Python interpreter, each on the child's own PATH. A probe is
+ * cheap (`claude --version` answers in about 100 ms, a miss in 1 ms) and
+ * its verdict is remembered per path for the plugin's lifetime. */
+const probed = new Map<string, boolean>();
+
+function isExecutable(path: string): boolean {
+  const known = probed.get(path);
+  if (known !== undefined) return known;
+  let ok = false;
   try {
-    return existsSync(path) && statSync(path).isFile();
+    const r = spawnSync(path, ['--version'], { stdio: 'ignore', timeout: 1500, windowsHide: true });
+    ok = r.error === undefined;
   } catch {
-    return false;
+    ok = false;
   }
+  probed.set(path, ok);
+  return ok;
 }
 
 export default class TerminalPlugin extends Plugin {
@@ -138,6 +154,7 @@ export default class TerminalPlugin extends Plugin {
   async saveSettings(): Promise<void> {
     this.settings = normaliseSettings(this.settings);
     await this.saveData(this.settings);
+    probed.clear();
     for (const v of this.views) v.applySettings();
   }
 
@@ -318,12 +335,12 @@ export default class TerminalPlugin extends Plugin {
   claudeExecutable(): string {
     const explicit = this.settings.claudePath.trim();
     if (explicit) return explicit;
-    return findOnPath('claude', this.childPath(), process.platform, isFile) ?? 'claude';
+    return findOnPath('claude', this.childPath(), process.platform, isExecutable) ?? 'claude';
   }
 
   /** The interpreter the pty helper runs on, resolved on the child PATH so the settings page can show it. */
   pythonExecutable(): string {
-    return resolveInterpreter(this.settings.pythonPath, this.childPath(), process.platform, isFile);
+    return resolveInterpreter(this.settings.pythonPath, this.childPath(), process.platform, isExecutable);
   }
 
   /* ------------------------------------------------------------ launchers */

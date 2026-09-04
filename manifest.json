@@ -1,7 +1,7 @@
 {
   "id": "icor-for-life-terminal",
   "name": "ICOR for Life - Terminal",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "minAppVersion": "1.7.2",
   "description": "A real terminal inside your vault. Your login shell in a tab or a split, keyboard capture that still lets the command palette through, and a one-command launcher for Claude Code in the vault folder.",
   "author": "myICOR",
