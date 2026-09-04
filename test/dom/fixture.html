@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  /* Stock Obsidian's variables for the two rooms, so the fallbacks resolve the
+     way they do in a vault without INKLINE. Values are Obsidian 1.x defaults. */
+  body { --background-primary: #ffffff; --background-primary-alt: #f5f5f5; --background-secondary: #f2f3f5;
+         --background-modifier-border: #e0e0e0; --background-modifier-hover: rgba(0,0,0,0.075);
+         --text-normal: #222222; --text-muted: #5c5c5c; --font-interface: system-ui, sans-serif;
+         --font-monospace: Menlo, monospace; --font-ui-small: 13px; --size-2-2: 4px; margin: 0; }
+  body.theme-dark { --background-primary: #1e1e1e; --background-primary-alt: #262626; --background-secondary: #262626;
+         --background-modifier-border: #363636; --background-modifier-hover: rgba(255,255,255,0.075);
+         --text-normal: #dadada; --text-muted: #b3b3b3; }
+  #host { width: 800px; height: 400px; }
+</style>
+<link rel="stylesheet" href="../../styles.css">
+</head>
+<body>
+<div id="host" class="ict-host"></div>
+<script src="../build/dom.js"></script>
+</body>
+</html>
