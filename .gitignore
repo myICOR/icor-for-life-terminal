@@ -1,0 +1,8 @@
+node_modules/
+main.js
+main.js.map
+data.json
+.DS_Store
+*.log
+test/build/
+tools/build/
