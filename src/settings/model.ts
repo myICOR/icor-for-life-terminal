@@ -2,6 +2,7 @@
  * door data.json comes through, so a value from an older version or a hand
  * edit never reaches the terminal unchecked. */
 
+import { isScrubbed } from '../env';
 import { loginShellProfile } from '../profiles';
 import type { CwdRule, ShellProfile } from '../profiles';
 
@@ -94,7 +95,7 @@ function normaliseProfile(raw: unknown, taken: string[]): ShellProfile | null {
   const env: Record<string, string> = {};
   if (r.env && typeof r.env === 'object') {
     for (const [k, v] of Object.entries(r.env as Record<string, unknown>)) {
-      if (typeof v === 'string' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(k)) env[k] = v;
+      if (typeof v === 'string' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(k) && !isScrubbed(k)) env[k] = v;
     }
   }
   return {

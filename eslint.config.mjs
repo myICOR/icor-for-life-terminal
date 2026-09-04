@@ -23,7 +23,7 @@ export default defineConfig([
     plugins: { obsidianmd },
     rules: {
       'obsidianmd/ui/sentence-case': ['warn', {
-        brands: ['Claude Code', 'Claude', 'ICOR', 'Obsidian', 'Windows Terminal', 'Python'],
+        brands: ['Claude Code', 'Claude', 'AI Chat', 'ICOR', 'Obsidian', 'Windows Terminal', 'Python'],
         acronyms: ['PATH', 'CLI', 'PTY', 'ID', 'WebGL', 'DOM'],
       }],
     },

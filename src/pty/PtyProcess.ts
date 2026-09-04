@@ -34,7 +34,13 @@ export interface PtyExit {
 const STDERR_CAP = 4000;
 const READY_LINE = 'ready\n';
 
-export const HELPER_ARGV_PREFIX = ['-c', HELPER_SOURCE];
+/* `-I` is load-bearing: `python3 -c` puts the working folder first on
+ * sys.path, and the helper's imports (pty, termios, ...) are not loaded at
+ * interpreter start, so a `termios.py` dropped into a vault folder would run
+ * as the user before the shell exists. Isolated mode drops the cwd from
+ * sys.path and ignores PYTHON* variables and the user site folder.
+ * test/helper-isolated.test.mjs plants that file and proves it never runs. */
+export const HELPER_ARGV_PREFIX = ['-I', '-c', HELPER_SOURCE];
 
 export class PtyProcess {
   private readonly child: ChildProcess;

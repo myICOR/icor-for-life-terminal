@@ -33,7 +33,10 @@ Rules the terminal applies when it reads that state:
 - `launch` other than `'claude'` or `'shell'` is refused. `returnTo` only
   matters with `launch: 'claude'`; a shell pane ignores it.
 - The state is persisted by Obsidian in workspace.json, so after a reload the
-  pane comes back with the same id and the same way back.
+  pane comes back with the same id and the same way back. It does not resume
+  on its own: a restored Claude pane shows a `Resume Claude Code` button and
+  waits (the terminal records `startedAt` at launch to tell a restore from a
+  fresh hand-off).
 
 The pane also keeps `title` and `startedAt` in its state; they are the
 terminal's own and a hand-off does not set them.

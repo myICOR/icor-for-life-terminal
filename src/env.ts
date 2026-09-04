@@ -104,6 +104,22 @@ export function splitPathLines(raw: string): string[] {
 export type FileProbe = (path: string) => boolean;
 
 /** The first `name` found on the given PATH string, or null. Pure via the probe. */
+/**
+ * The interpreter the helper runs on. A setting with a path separator is
+ * used as is; a bare name is looked up on the child's own PATH, so what runs
+ * is what the setting page shows, and not whatever Node's spawn would find.
+ */
+export function resolveInterpreter(
+  setting: string,
+  pathValue: string,
+  platform: NodeJS.Platform,
+  probe: (path: string) => boolean,
+): string {
+  const s = setting.trim() || 'python3';
+  if (s.includes('/') || s.includes('\\')) return s;
+  return findOnPath(s, pathValue, platform, probe) ?? s;
+}
+
 export function findOnPath(
   name: string,
   pathValue: string,

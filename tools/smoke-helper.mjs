@@ -21,7 +21,7 @@ const EXIT_CODE = 7;
 const script = `echo READY; read line; stty size; exit ${EXIT_CODE}`;
 const started = Date.now();
 
-const child = spawn(python, ['-c', helper, '100', '30', '--', shell, '-lc', script], {
+const child = spawn(python, ['-I', '-c', helper, '100', '30', '--', shell, '-lc', script], {
   stdio: ['pipe', 'pipe', 'pipe', 'pipe'],
   env: { ...process.env, TERM: 'xterm-256color' },
 });

@@ -116,9 +116,9 @@ export interface ExitThenSwapOptions {
   settleMs?: number;
   /** How long to wait for the exit before giving up WITHOUT swapping. */
   ceilingMs?: number;
-  now?: () => number;
-  setTimeout?: (fn: () => void, ms: number) => unknown;
-  clearTimeout?: (handle: unknown) => void;
+  /** The caller's timers: the view passes the window's, so a popout window keeps working; tests pass node's. */
+  setTimeout: (fn: () => void, ms: number) => unknown;
+  clearTimeout: (handle: unknown) => void;
 }
 
 export type ExitThenSwapResult = 'swapped' | 'timeout';
@@ -136,13 +136,13 @@ export const EXIT_CEILING_MS = 10000;
 export async function exitThenSwap(
   pty: ExitablePty | null,
   swap: () => Promise<void> | void,
-  opts: ExitThenSwapOptions = {},
+  opts: ExitThenSwapOptions,
 ): Promise<ExitThenSwapResult> {
   const settle = opts.settleMs ?? EXIT_SETTLE_MS;
   const ceiling = opts.ceilingMs ?? EXIT_CEILING_MS;
   const command = opts.exitCommand ?? EXIT_COMMAND;
-  const setT = opts.setTimeout ?? ((fn, ms) => setTimeout(fn, ms));
-  const clearT = opts.clearTimeout ?? ((h) => clearTimeout(h as ReturnType<typeof setTimeout>));
+  const setT = opts.setTimeout;
+  const clearT = opts.clearTimeout;
 
   if (!pty || !pty.alive) {
     await swap();

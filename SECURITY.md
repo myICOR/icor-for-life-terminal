@@ -44,9 +44,14 @@ Only the most recent release is supported. One branch, no backports.
 The source is in this repository; every claim below names the file to read.
 
 **It spawns processes.** `src/pty/PtyProcess.ts` calls Node's
-`child_process.spawn` with the configured Python interpreter
-(`python3` by default), the helper source as a `-c` argument, the terminal
-size, and the command to run. No shell is involved in that spawn: the
+`child_process.spawn` with the configured Python interpreter (a bare
+`python3` by default, resolved on the child's own PATH and shown on the
+settings page), the flags `-I -c`, the helper source, the terminal size,
+and the command to run. `-I` is Python's isolated mode: the working folder
+is not on `sys.path`, `PYTHON*` variables and the user site folder are
+ignored, so a `termios.py` (or any other stdlib name) placed in a vault
+folder is never imported by the helper.
+`test/helper-isolated.test.mjs` plants exactly that file and proves it. No shell is involved in that spawn: the
 arguments are passed as an array, never interpolated into a command line.
 The command is your login shell (`$SHELL -l`) unless you configured a
 profile, or `claude` / `claude --resume <id>` from the Claude launcher.
@@ -54,8 +59,9 @@ profile, or `claude` / `claude --resume <id>` from the Claude launcher.
 **The helper is one Python file you can read top to bottom.** `src/pty/helper.py`
 forks the command onto a pseudo-terminal and copies bytes: stdin to the
 pty, the pty to stdout, resize frames from fd 3 to `ioctl(TIOCSWINSZ)`.
-It imports only the standard library, opens no socket, reads no file, and
-never touches the environment. It is shipped inside `main.js` as a string
+It imports only the standard library, and with `-I` only the interpreter's
+own copy of it; it opens no socket, reads no file, and never touches the
+environment. It is shipped inside `main.js` as a string
 because a directory release can carry only `main.js`, `manifest.json` and
 `styles.css`; `test/frames.test.mjs` asserts the string in the bundle
 contains no `environ` access.
@@ -73,7 +79,12 @@ you list in settings), sets `TERM`, `COLORTERM`, `TERM_PROGRAM`,
 `ICOR_VAULT`, and **removes every variable whose name starts with `CLAUDE`**.
 The removal is deliberate: a Claude Code CLI that inherits
 `CLAUDE_CODE_CHILD_SESSION` silently stops saving transcripts. Profile
-environment entries you configure are added on top.
+environment entries you configure are merged in BEFORE that scrub and PATH
+repair, so a profile can add variables but cannot put a `CLAUDE*` name back
+or replace PATH; `normaliseProfile` in `src/settings/model.ts` drops such
+names when the settings are read, too. Profile values are stored in plain
+text in this plugin's `data.json`; the settings page says so next to the
+field, and secrets belong in your shell profile instead.
 
 **It captures the keyboard while a pane is focused.** `src/view/TerminalView.ts`
 pushes an Obsidian keymap `Scope` on focus and pops it on blur, so keys

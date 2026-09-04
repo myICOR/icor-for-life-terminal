@@ -67,6 +67,8 @@ export class TerminalView extends ItemView {
   private heldId: string | null = null;
   private backAction: HTMLElement | null = null;
   private swapping = false;
+  /** What the in-pane notice's one button does right now. */
+  private noticeAction: (() => void) | null = null;
 
   constructor(leaf: WorkspaceLeaf, private readonly plugin: TerminalPlugin) {
     super(leaf);
@@ -396,6 +398,23 @@ export class TerminalView extends ItemView {
     this.state.launch = launch;
     this.refreshHeader();
 
+    if (restored && launch === 'claude') {
+      /* Nothing with a runtime starts on its own after a reload. A resumed
+         Claude session runs the vault's own hooks, and that is the user's
+         click, not Obsidian's restore. Shells relaunch, like any terminal. */
+      const id = this.state.resumeSessionId;
+      this.noticeAction = () => {
+        refs.notice.hide();
+        this.launch(false);
+      };
+      refs.notice.show(
+        'Restored after a reload',
+        `This pane was running Claude Code in ${cwd}${id ? ` on session ${id}` : ''}. It does not start on its own; resume it when you are ready.`,
+        'Resume Claude Code',
+      );
+      return;
+    }
+
     let command: string;
     let args: string[];
     if (launch === 'claude') {
@@ -418,16 +437,18 @@ export class TerminalView extends ItemView {
       args = profile.args;
     }
 
-    const env = {
-      ...buildChildEnv(process.env, {
+    /* The profile's variables go in BEFORE the scrub, so a profile can add to
+       the environment but never put a CLAUDE* name back or replace PATH. */
+    const env = buildChildEnv(
+      { ...process.env, ...profile.env },
+      {
         platform: process.platform,
         home: process.env.HOME ?? process.env.USERPROFILE ?? '',
         vaultPath: this.plugin.vaultPath,
         version: this.plugin.manifest.version,
         extraPath: splitPathLines(s.extraPath),
-      }),
-      ...profile.env,
-    };
+      },
+    );
 
     if (process.platform === 'win32') {
       this.launchExternal(cwd, [command, ...args], env);
@@ -438,8 +459,14 @@ export class TerminalView extends ItemView {
     if (restored) {
       term.writeln(`${DIM}restored after a reload · scrollback is not kept, the shell starts fresh in the same folder${RESET}`);
     }
+    if (typeof this.state.startedAt !== 'number') {
+      /* A pane handed over by another plugin arrives without a timestamp;
+         record the launch so a later restore is recognised as one. */
+      this.state.startedAt = Date.now();
+      this.app.workspace.requestSaveLayout();
+    }
     const pty = new PtyProcess({
-      python: s.pythonPath,
+      python: this.plugin.pythonExecutable(),
       command,
       args,
       cwd,
@@ -495,12 +522,12 @@ export class TerminalView extends ItemView {
       launch ? 'Open in external terminal' : null,
     );
     if (!launch) return;
-    this.registerDomEvent(refs.notice.action, 'click', () => {
+    this.noticeAction = () => {
       openExternalTerminal(launch, cwd, env).catch((err: unknown) => {
         const message = err instanceof Error ? err.message : String(err);
         new Notice(`Terminal: could not open ${launch.file}: ${message}`);
       });
-    });
+    };
   }
 
   private releaseHeld(): void {
@@ -561,6 +588,7 @@ export class TerminalView extends ItemView {
     this.registerDomEvent(refs.exit.restart, 'click', () => this.restart());
     this.registerDomEvent(refs.exit.close, 'click', () => this.leaf.detach());
     this.registerDomEvent(refs.exit.back, 'click', () => void this.backToChat());
+    this.registerDomEvent(refs.notice.action, 'click', () => this.noticeAction?.());
   }
 
   /* ------------------------------------------------------------- hand-off */
@@ -614,10 +642,17 @@ export class TerminalView extends ItemView {
     this.swapping = true;
     this.backAction?.addClass('is-disabled');
     try {
-      const result = await exitThenSwap(this.pty, async () => {
-        this.teardownPty();
-        await this.leaf.setViewState({ type: target.type, active: true, state: target.state });
-      });
+      const result = await exitThenSwap(
+        this.pty,
+        async () => {
+          this.teardownPty();
+          await this.leaf.setViewState({ type: target.type, active: true, state: target.state });
+        },
+        {
+          setTimeout: (fn, ms) => window.setTimeout(fn, ms),
+          clearTimeout: (h) => window.clearTimeout(h as number),
+        },
+      );
       if (result === 'timeout') {
         new Notice(`Terminal: Claude did not exit within ${EXIT_CEILING_MS / 1000} s. It is still running; end it in the pane, then go back.`);
       }

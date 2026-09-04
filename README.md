@@ -45,9 +45,14 @@ later.
 
 ## Prerequisites
 
-- **macOS or Linux** for the integrated pane. macOS needs `python3`, which
-  comes with the Xcode Command Line Tools (`xcode-select --install`); Linux
-  nearly always has it. The interpreter is a setting.
+- **macOS or Linux** for the integrated pane. macOS needs a `python3`: the
+  one from the Xcode Command Line Tools (`xcode-select --install`) or
+  Homebrew's; Linux nearly always has one. A bare name in the Python setting
+  is looked up on the repaired PATH (developer tool folders first, so a
+  Homebrew `python3` wins when both are installed) and the setting shows
+  which one is in use; an absolute path is used as is. The helper runs in
+  Python's isolated mode (`-I`), so nothing in a vault folder can be
+  imported by it.
 - **Claude Code** installed, for the launcher. Everything else works
   without it.
 
@@ -176,11 +181,13 @@ once: [docs/handoff.md](docs/handoff.md).
 
 ## Restore on reload
 
-Obsidian remembers every terminal pane. After a reload the pane comes back
-and the shell is started again in the same folder, with the same profile;
-a Claude pane with a known session id resumes it. Scrollback is not
-restorable: the process that produced it is gone, and the first line of the
-restored pane says so.
+Obsidian remembers every terminal pane. After a reload a shell pane comes
+back and the shell is started again in the same folder, with the same
+profile. A Claude pane comes back with a `Resume Claude Code` button and
+waits for it: a resumed session runs your vault's hooks, and that should be
+your click, not Obsidian's restore. Scrollback is not restorable: the
+process that produced it is gone, and the first line of the restored pane
+says so.
 
 ## Deferred, with reasons
 

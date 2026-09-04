@@ -39,6 +39,8 @@ export function isCustom(item: ItemDefinition): item is CustomItem {
 export interface DefinitionInput {
   settings: TerminalSettings;
   platform: string;
+  /** What the Python setting resolves to right now, shown so the user sees which interpreter runs. */
+  pythonResolved: string;
 }
 
 export function settingDefinitions(input: DefinitionInput): GroupDefinition[] {
@@ -146,7 +148,7 @@ export function settingDefinitions(input: DefinitionInput): GroupDefinition[] {
       items: [
         {
           name: 'Python',
-          desc: 'The pty helper runs on Python 3. On macOS the system python3 needs the Xcode Command Line Tools.',
+          desc: `The pty helper runs on Python 3 in isolated mode (-I). A bare name is looked up on the repaired PATH; an absolute path is used as is. In use now: ${input.pythonResolved}.`,
           control: { type: 'text', key: 'pythonPath', placeholder: 'python3' },
         },
         {

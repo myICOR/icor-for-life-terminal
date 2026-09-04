@@ -9,7 +9,7 @@ import { existsSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import process from 'node:process';
 import { INK_PLUGIN_ATTR, INK_PLUGIN_NAME, TERMINAL_ICON, VIEW_TYPE_TERMINAL } from './constants';
-import { augmentPath, findOnPath, splitPathLines } from './env';
+import { augmentPath, findOnPath, resolveInterpreter, splitPathLines } from './env';
 import { HeldSessions } from './claude/held';
 import { normaliseSessionId } from './claude/launch';
 import { findProfile, resolveCwd } from './profiles';
@@ -254,18 +254,27 @@ export default class TerminalPlugin extends Plugin {
     await this.openTerminal({ launch: 'claude', resumeSessionId: id });
   }
 
-  /** The Claude Code executable: the setting, else the first on the repaired PATH, else the bare name. */
-  claudeExecutable(): string {
-    const explicit = this.settings.claudePath.trim();
-    if (explicit) return explicit;
-    const path = augmentPath(process.env.PATH, {
+  /** The PATH every child gets: extras first, then the tool folders, then the host. */
+  childPath(): string {
+    return augmentPath(process.env.PATH, {
       platform: process.platform,
       home: process.env.HOME ?? process.env.USERPROFILE ?? '',
       vaultPath: this.vaultPath,
       version: this.manifest.version,
       extraPath: splitPathLines(this.settings.extraPath),
     });
-    return findOnPath('claude', path, process.platform, isFile) ?? 'claude';
+  }
+
+  /** The Claude Code executable: the setting, else the first on the repaired PATH, else the bare name. */
+  claudeExecutable(): string {
+    const explicit = this.settings.claudePath.trim();
+    if (explicit) return explicit;
+    return findOnPath('claude', this.childPath(), process.platform, isFile) ?? 'claude';
+  }
+
+  /** The interpreter the pty helper runs on, resolved on the child PATH so the settings page can show it. */
+  pythonExecutable(): string {
+    return resolveInterpreter(this.settings.pythonPath, this.childPath(), process.platform, isFile);
   }
 
   /* ------------------------------------------------------------ launchers */

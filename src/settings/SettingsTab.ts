@@ -33,7 +33,7 @@ export class TerminalSettingsTab extends PluginSettingTab {
   }
 
   private input(): DefinitionInput {
-    return { settings: this.plugin.settings, platform: process.platform };
+    return { settings: this.plugin.settings, platform: process.platform, pythonResolved: this.plugin.pythonExecutable() };
   }
 
   /* ------------------------------------------------ 1.13: declarative */
@@ -211,7 +211,7 @@ export class TerminalSettingsTab extends PluginSettingTab {
     );
     new Setting(card)
       .setName('Environment')
-      .setDesc('One variable per line, written name=value, on top of the terminal environment.')
+      .setDesc('One variable per line, written name=value, merged in before the Claude Code variables are removed. Stored in plain text in this plugin\'s data.json; keep secrets in your shell profile instead.')
       .addTextArea((t) =>
         t.setValue(formatEnvLines(p.env)).onChange((v) => {
           p.env = parseEnvLines(v);

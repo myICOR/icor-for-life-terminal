@@ -23,9 +23,9 @@ test('the helper parse refuses anything but three tokens of the right kind', () 
 });
 
 test('the helper ships as a -c string, and it reads the same frame grammar', () => {
-  assert.equal(HELPER_ARGV_PREFIX[0], '-c');
+  assert.deepEqual(HELPER_ARGV_PREFIX.slice(0, 2), ['-I', '-c'], 'isolated mode: the cwd never enters sys.path');
   /* Code lines only: the header comment names the pitfalls it avoids. */
-  const source = HELPER_ARGV_PREFIX[1].split('\n').filter((l) => !l.trimStart().startsWith('#')).join('\n');
+  const source = HELPER_ARGV_PREFIX[2].split('\n').filter((l) => !l.trimStart().startsWith('#')).join('\n');
   assert.match(source, /pty\.fork\(\)/);
   assert.match(source, /parts\[0\] != b"resize"/);
   assert.match(source, /waitpid\(pid, os\.WNOHANG\)/, 'the macOS EOF quirk needs waitpid polling');

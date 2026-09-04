@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildChildEnv, augmentPath, isScrubbed, findOnPath, splitPathLines, TERM_NAME, DEFAULT_LANG } from './build/pure.mjs';
+import { buildChildEnv, augmentPath, isScrubbed, findOnPath, splitPathLines, TERM_NAME, DEFAULT_LANG, resolveInterpreter } from './build/pure.mjs';
 
 const input = { platform: 'darwin', home: '/Users/t', vaultPath: '/Users/t/vault', version: '0.1.0', extraPath: ['/x/bin'] };
 
@@ -15,6 +15,22 @@ test('CLAUDE* variables never reach the child', () => {
   assert.equal(env.HOME, '/Users/t');
   assert.ok(isScrubbed('CLAUDE_ANYTHING'));
   assert.ok(!isScrubbed('MY_CLAUDE'));
+});
+
+test('a profile merged before the scrub cannot put a CLAUDE* name back', () => {
+  const host = { PATH: '/usr/bin', CLAUDE_CODE_CHILD_SESSION: '1' };
+  const profile = { CLAUDECODE: '1', CLAUDE_API_KEY: 'x', FOO: 'bar' };
+  const env = buildChildEnv({ ...host, ...profile }, { platform: 'linux', home: '/h', vaultPath: '/v', version: '0' });
+  assert.equal(env.FOO, 'bar');
+  for (const k of Object.keys(env)) assert.ok(!k.startsWith('CLAUDE'), k);
+});
+
+test('the interpreter: an absolute setting as is, a bare name looked up on the child PATH', () => {
+  const probe = (p) => p === '/opt/homebrew/bin/python3';
+  assert.equal(resolveInterpreter('python3', '/usr/bin:/opt/homebrew/bin', 'darwin', probe), '/opt/homebrew/bin/python3');
+  assert.equal(resolveInterpreter('/usr/bin/python3', '/opt/homebrew/bin', 'darwin', probe), '/usr/bin/python3');
+  assert.equal(resolveInterpreter('python3', '/nowhere', 'darwin', probe), 'python3', 'not found: the bare name, so spawn reports it');
+  assert.equal(resolveInterpreter('  ', '/opt/homebrew/bin', 'darwin', probe), '/opt/homebrew/bin/python3', 'empty means python3');
 });
 
 test('the terminal declares itself', () => {

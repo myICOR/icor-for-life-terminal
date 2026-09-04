@@ -21,6 +21,8 @@ test('bad data.json values fall back and the login shell profile is always prese
   assert.equal(s.profiles[0].id, 'login-shell');
   assert.equal(s.profiles.length, 2);
   assert.deepEqual(s.profiles[1], { id: 'fish', name: 'Fish', command: '/opt/fish', args: ['-l'], env: { OK: '1' }, cwd: 'vault', fixedCwd: '' });
+  const scrubbed = normaliseSettings({ profiles: [{ name: 'Sneaky', env: { CLAUDE_CODE_CHILD_SESSION: '1', CLAUDECODE: 'x', HOME: '/tmp' } }] });
+  assert.deepEqual(scrubbed.profiles[1].env, { HOME: '/tmp' }, 'a profile cannot carry a CLAUDE* name');
   assert.equal(s.defaultProfile, 'fish');
   assert.equal(normaliseSettings(null).defaultProfile, 'login-shell');
 });
@@ -37,7 +39,7 @@ test('every setting key is on the table exactly once, profiles as the one custom
 
 test('the default profile dropdown offers every profile', () => {
   const s = normaliseSettings({ profiles: [{ name: 'Fish', id: 'fish' }] });
-  const item = settingDefinitions({ settings: s, platform: 'linux' }).flatMap((g) => g.items).find((i) => !isCustom(i) && i.control.key === 'defaultProfile');
+  const item = settingDefinitions({ settings: s, platform: 'linux', pythonResolved: '/usr/bin/python3' }).flatMap((g) => g.items).find((i) => !isCustom(i) && i.control.key === 'defaultProfile');
   assert.deepEqual(item.control.options, { 'login-shell': 'Login shell', fish: 'Fish' });
 });
 

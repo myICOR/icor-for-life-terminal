@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { parseTerminalState, parseReturnTo, exitThenSwap, claudeArgs, HeldSessions, EXIT_COMMAND } from './build/pure.mjs';
 
 const ID = 'c1427e31-1234-4abc-8def-0123456789ab';
+const timers = { setTimeout: (fn, ms) => setTimeout(fn, ms), clearTimeout: (h) => clearTimeout(h) };
 const RETURN = { type: 'icor-chat-view', state: { resumeSessionId: ID, provider: 'claude' } };
 
 test('the contract state parses field by field and normalises the id', () => {
@@ -92,7 +93,7 @@ test('exit then swap: /exit, Enter after the settle, swap once, only after the e
     async () => {
       log.push(`swap alive=${pty.alive}`);
     },
-    { settleMs: 5, ceilingMs: 500 },
+    { ...timers, settleMs: 5, ceilingMs: 500 },
   );
   assert.equal(result, 'swapped');
   assert.deepEqual(pty.writes, [EXIT_COMMAND, '\r']);
@@ -102,7 +103,7 @@ test('exit then swap: /exit, Enter after the settle, swap once, only after the e
 test('exit then swap: a process that ignores /exit is never swapped away from', async () => {
   const pty = new FakePty({ exitsOn: 'never' });
   let swaps = 0;
-  const result = await exitThenSwap(pty, () => void swaps++, { settleMs: 5, ceilingMs: 40 });
+  const result = await exitThenSwap(pty, () => void swaps++, { ...timers, settleMs: 5, ceilingMs: 40 });
   assert.equal(result, 'timeout');
   assert.equal(swaps, 0);
   assert.ok(pty.alive);
@@ -114,15 +115,15 @@ test('exit then swap: a process that already ended swaps at once, nothing is typ
   const pty = new FakePty();
   pty.end();
   let swaps = 0;
-  assert.equal(await exitThenSwap(pty, () => void swaps++), 'swapped');
-  assert.equal(await exitThenSwap(null, () => void swaps++), 'swapped');
+  assert.equal(await exitThenSwap(pty, () => void swaps++, timers), 'swapped');
+  assert.equal(await exitThenSwap(null, () => void swaps++, timers), 'swapped');
   assert.equal(swaps, 2);
   assert.deepEqual(pty.writes, []);
 });
 
 test('exit then swap: an exit that lands before the settle cancels the Enter', async () => {
   const pty = new FakePty({ exitsOn: 'never' });
-  const done = exitThenSwap(pty, () => undefined, { settleMs: 30, ceilingMs: 500 });
+  const done = exitThenSwap(pty, () => undefined, { ...timers, settleMs: 30, ceilingMs: 500 });
   pty.end();
   assert.equal(await done, 'swapped');
   await new Promise((r) => setTimeout(r, 50));
