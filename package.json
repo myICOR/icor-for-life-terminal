@@ -3,7 +3,7 @@
   "version": "0.1.2",
   "private": true,
   "description": "ICOR for Life - Terminal - a real terminal inside your vault.",
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "LicenseRef-ICOR-Source-Available-1.0",
   "type": "module",
   "scripts": {
     "build": "node esbuild.config.mjs production",

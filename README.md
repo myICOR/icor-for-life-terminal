@@ -269,12 +269,14 @@ report on this plugin, read against the code:
 
 ## Licence
 
-Source-available under the ICOR for Life Source-Available License (Code),
-Version 1.0; the full text is in `LICENSE`. In plain words: with an ICOR
-for Life / myICOR Inner Circle membership, or installed from the Obsidian
-directory, you may install and run the plugin in your own vaults, read and
-study its source, and modify it for your own personal use. You may not
-redistribute it or a modified version to anyone else, in source or built
-form, and you may not sell it or use it to provide a product or service to
-others. Third-party components (xterm.js and its addons) are MIT; see
+What you can do: install it, run it, read the code, modify your own copy,
+and use it in your own business. What you cannot do: sell it, redistribute
+it, or offer it (original or modified) as your own product or service to
+others. Contributions: send a pull request. See `CONTRIBUTING.md`;
+submitting one grants Paperless Movement the rights described in Section 7
+of the LICENSE. This is not open source. It is source-available: the code
+is visible, personal and business use are free, resale and republishing
+are not. Bundled third-party components keep their own licenses; see
 `THIRD-PARTY-NOTICES.md`.
+
+Full text in LICENSE. Machine-readable identifier: LicenseRef-ICOR-Source-Available-1.0.
