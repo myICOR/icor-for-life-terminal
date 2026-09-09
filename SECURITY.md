@@ -19,7 +19,7 @@ Two channels, in order of preference:
 1. **GitHub private security advisory** (preferred). Open a draft advisory on
    the Security tab of this repository. It stays private between you and the
    maintainer until a fix ships.
-2. **Email** `team@myicor.com` with `SECURITY` and `icor-for-life-terminal` in
+2. **Email** `support@myicor.com` with `SECURITY` and `icor-for-life-terminal` in
    the subject line. This is a monitored mailbox. If you want to encrypt the
    report, say so in a first message and we will arrange a key.
 
