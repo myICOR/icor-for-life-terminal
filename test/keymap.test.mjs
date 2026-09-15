@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseHotkey, matches, virtualKey, defaultAllowList, compileAllowList, passesToObsidian, splitHotkeyLines } from './build/pure.mjs';
+import { parseHotkey, matches, virtualKey, defaultAllowList, compileAllowList, passesToObsidian, splitHotkeyLines, captureApplies } from './build/pure.mjs';
 
 const ev = (o) => ({ key: '', code: '', metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, ...o });
 
@@ -49,4 +49,32 @@ test('modifier spellings are accepted', () => {
   assert.equal(parseHotkey('Control+Esc', 'linux').key, 'escape');
   assert.equal(parseHotkey('Bogus+K', 'darwin'), null);
   assert.equal(parseHotkey('', 'darwin'), null);
+});
+
+/* The pane builds xterm and pushes the capture scope on every platform, but a
+   Windows pane never gets a pseudo-terminal: it returns to the external
+   launcher first. Capture there would take Ctrl+P and Ctrl+W from Obsidian and
+   hand them to nothing. The same shape covers a macOS or Linux pane after its
+   shell has exited. */
+test('capture applies only while a live process can receive the keys', () => {
+  const live = { alive: true };
+  const exited = { alive: false };
+  assert.equal(captureApplies(true, live), true, 'a running shell keeps the keys');
+  assert.equal(captureApplies(false, live), false, 'capture released is released');
+  assert.equal(captureApplies(true, null), false, 'no pty at all: the Windows pane');
+  assert.equal(captureApplies(true, exited), false, 'the shell exited: the pane is a transcript');
+  assert.equal(captureApplies(false, null), false);
+});
+
+/* What the Windows pane costs the user if capture is not gated: on a non-mac
+   platform the allow-list is only the bracket pair, so Ctrl+P and Ctrl+W are
+   NOT on it and the scope's catch-all would claim them. */
+test('the keys a Windows pane would swallow are the ones not on its allow-list', () => {
+  const win = compileAllowList(defaultAllowList('win32'), 'win32');
+  const ctrlP = ev({ key: 'p', code: 'KeyP', ctrlKey: true });
+  const ctrlW = ev({ key: 'w', code: 'KeyW', ctrlKey: true });
+  assert.ok(!passesToObsidian(ctrlP, win), 'Ctrl+P is off the allow-list there');
+  assert.ok(!passesToObsidian(ctrlW, win), 'Ctrl+W is off the allow-list there');
+  /* So the only thing that can give them back is the capture gate. */
+  assert.equal(captureApplies(true, null), false);
 });

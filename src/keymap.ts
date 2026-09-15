@@ -145,3 +145,16 @@ export function splitHotkeyLines(raw: string): string[] {
 export function passesToObsidian(evt: KeyLike, allow: CompiledAllowList): boolean {
   return allow.hotkeys.some((hk) => matches(hk, evt));
 }
+
+/**
+ * Whether capture means anything for this pane right now. Capture exists to
+ * take keys away from Obsidian so that a running program can have them, so it
+ * only applies while there is a live process to receive them. Two panes have
+ * none: a Windows pane, where no pseudo-terminal is ever created and the pane
+ * is the external launcher's notice, and any pane whose shell has exited,
+ * which is a transcript. In both the keys are Obsidian's, and holding them
+ * would swallow Ctrl+P and Ctrl+W for nothing.
+ */
+export function captureApplies(captureOn: boolean, session: { alive: boolean } | null): boolean {
+  return captureOn && session !== null && session.alive;
+}

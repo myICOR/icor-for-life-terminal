@@ -15,7 +15,7 @@ import { basename } from 'node:path';
 import process from 'node:process';
 import { CHAT_PLUGIN_ID, CHAT_VIEW_TYPE, TERMINAL_ICON, VIEW_TYPE_TERMINAL } from '../constants';
 import { buildChildEnv, splitPathLines } from '../env';
-import { compileAllowList, defaultAllowList, passesToObsidian, splitHotkeyLines, virtualKey } from '../keymap';
+import { captureApplies, compileAllowList, defaultAllowList, passesToObsidian, splitHotkeyLines, virtualKey } from '../keymap';
 import type { CompiledAllowList } from '../keymap';
 import { findProfile, resolveShell } from '../profiles';
 import { claudeArgs } from '../claude/launch';
@@ -85,10 +85,18 @@ export class TerminalView extends ItemView {
        allow-listed key lets the walk fall through to the parent scope, which
        is where Cmd+P lives. */
     this.captureScope.register(null, null, (evt: KeyboardEvent) => {
-      if (!this.captureOn) return undefined;
+      if (!this.captureActive) return undefined;
       if (passesToObsidian(evt, this.allow)) return undefined;
       return true;
     });
+  }
+
+  /* Capture is asked for in settings; whether it APPLIES also depends on
+     there being a live process to give the keys to. The question is asked at
+     the verdict, not when the scope is pushed, so a pane that gains a shell
+     or loses one while it is focused needs no push or pop to be right. */
+  private get captureActive(): boolean {
+    return captureApplies(this.captureOn, this.pty);
   }
 
   private compileAllow(): CompiledAllowList {
@@ -284,7 +292,7 @@ export class TerminalView extends ItemView {
     const platform = process.platform;
     term.attachCustomKeyEventHandler((evt) => {
       if (evt.type !== 'keydown') return true;
-      if (this.captureOn && passesToObsidian(evt, this.allow)) return false;
+      if (this.captureActive && passesToObsidian(evt, this.allow)) return false;
       const mod = platform === 'darwin' ? evt.metaKey && !evt.ctrlKey : evt.ctrlKey && evt.shiftKey;
       if (mod && !evt.altKey) {
         const k = virtualKey(evt);
