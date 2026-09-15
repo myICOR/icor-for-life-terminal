@@ -49,6 +49,12 @@ you never start one against the wrong folder.
   this version.
 - **The command palette still works** while the terminal has your keyboard,
   so you are never trapped in the pane.
+- **The shell belongs to Obsidian's window.** Reloading, updating or quitting
+  Obsidian ends it, the way closing a terminal window ends the shell inside
+  it. Closing the lid does not, on its own; what you usually see after a
+  sleep is Obsidian reloading on wake. The pane comes back and starts a fresh
+  shell in the same folder, without the earlier output. For a job that has to
+  survive that, start `tmux` or `screen` in the pane and run it there.
 - **INKLINE skins it**, and it stays legible on any other theme.
 - **Beta.** It runs in a real vault every day and it has rough edges. If
   something looks off, open an issue.

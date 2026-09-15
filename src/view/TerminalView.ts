@@ -472,7 +472,7 @@ export class TerminalView extends ItemView {
 
     this.doFit();
     if (restored) {
-      term.writeln(`${DIM}restored after a reload · scrollback is not kept, the shell starts fresh in the same folder${RESET}`);
+      term.writeln(`${DIM}restored after a reload (Obsidian restarted, for example after sleep). Scrollback is not kept, the shell starts fresh in the same folder.${RESET}`);
     }
     if (typeof this.state.startedAt !== 'number') {
       /* A pane handed over by another plugin arrives without a timestamp;
