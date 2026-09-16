@@ -15,7 +15,7 @@ import { basename } from 'node:path';
 import process from 'node:process';
 import { CHAT_PLUGIN_ID, CHAT_VIEW_TYPE, TERMINAL_ICON, VIEW_TYPE_TERMINAL } from '../constants';
 import { buildChildEnv, splitPathLines } from '../env';
-import { captureApplies, compileAllowList, defaultAllowList, passesToObsidian, splitHotkeyLines, virtualKey } from '../keymap';
+import { captureApplies, captureMenuTitle, captureNotice, compileAllowList, defaultAllowList, passesToObsidian, splitHotkeyLines, virtualKey } from '../keymap';
 import type { CompiledAllowList } from '../keymap';
 import { findProfile, resolveShell } from '../profiles';
 import { claudeArgs } from '../claude/launch';
@@ -323,7 +323,7 @@ export class TerminalView extends ItemView {
 
   toggleCapture(): boolean {
     this.captureOn = !this.captureOn;
-    new Notice(this.captureOn ? 'Terminal: keyboard captured' : 'Terminal: keyboard released');
+    new Notice(captureNotice(this.captureOn, this.pty));
     return this.captureOn;
   }
 
@@ -758,13 +758,15 @@ export class TerminalView extends ItemView {
     menu.addItem((i) => i.setTitle('Restart shell').setIcon('rotate-ccw').setSection('terminal').onClick(() => this.restart()));
     menu.addItem((i) => i.setTitle('Clear terminal').setIcon('eraser').setSection('terminal').onClick(() => this.clear()));
     menu.addItem((i) => i.setTitle('Find in terminal').setIcon('search').setSection('terminal').onClick(() => this.openSearch()));
-    menu.addItem((i) =>
-      i
-        .setTitle(this.captureOn ? 'Release keyboard to Obsidian' : 'Capture keyboard in terminal')
-        .setIcon('keyboard')
-        .setSection('terminal')
-        .onClick(() => this.toggleCapture()),
-    );
+    /* Titled from what is true, not from the setting alone: a pane whose shell
+       has exited, and a Windows pane that never had one, captures nothing, so
+       the item says so and does not offer a click that would change nothing
+       visible. The command stays available for arming the next shell. */
+    menu.addItem((i) => {
+      i.setTitle(captureMenuTitle(this.captureOn, this.pty)).setIcon('keyboard').setSection('terminal');
+      if (captureApplies(true, this.pty)) i.onClick(() => this.toggleCapture());
+      else i.setDisabled(true);
+    });
   }
 
   override async onClose(): Promise<void> {

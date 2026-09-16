@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseHotkey, matches, virtualKey, defaultAllowList, compileAllowList, passesToObsidian, splitHotkeyLines, captureApplies } from './build/pure.mjs';
+import { parseHotkey, matches, virtualKey, defaultAllowList, compileAllowList, passesToObsidian, splitHotkeyLines, captureApplies, captureMenuTitle, captureNotice } from './build/pure.mjs';
 
 const ev = (o) => ({ key: '', code: '', metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, ...o });
 
@@ -77,4 +77,32 @@ test('the keys a Windows pane would swallow are the ones not on its allow-list',
   assert.ok(!passesToObsidian(ctrlW, win), 'Ctrl+W is off the allow-list there');
   /* So the only thing that can give them back is the capture gate. */
   assert.equal(captureApplies(true, null), false);
+});
+
+/* The same gate has to reach what the pane SAYS. Before this, both strings
+   came from the setting alone, so a dead pane offered "Release keyboard to
+   Obsidian" and the toggle announced "keyboard captured" while every key went
+   to Obsidian. */
+test('the menu item says what is true, not what the setting says', () => {
+  const live = { alive: true };
+  const exited = { alive: false };
+  assert.equal(captureMenuTitle(true, live), 'Release keyboard to Obsidian');
+  assert.equal(captureMenuTitle(false, live), 'Capture keyboard in terminal');
+  assert.equal(captureMenuTitle(true, exited), 'Keyboard not captured, no running shell');
+  assert.equal(captureMenuTitle(false, exited), 'Keyboard not captured, no running shell');
+  assert.equal(captureMenuTitle(true, null), 'Keyboard not captured, no running shell', 'the Windows pane');
+});
+
+test('the toggle notice does not claim keys a dead pane cannot hold', () => {
+  const live = { alive: true };
+  const exited = { alive: false };
+  assert.equal(captureNotice(true, live), 'Terminal: keyboard captured');
+  assert.equal(captureNotice(false, live), 'Terminal: keyboard released');
+  assert.equal(
+    captureNotice(true, exited),
+    'Terminal: capture on for the next shell. No shell is running, so the keys stay with Obsidian.',
+  );
+  assert.equal(captureNotice(true, null), captureNotice(true, exited), 'the Windows pane reads the same');
+  /* Released is released either way: the keys are Obsidian's in both. */
+  assert.equal(captureNotice(false, exited), 'Terminal: keyboard released');
 });

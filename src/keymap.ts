@@ -158,3 +158,27 @@ export function passesToObsidian(evt: KeyLike, allow: CompiledAllowList): boolea
 export function captureApplies(captureOn: boolean, session: { alive: boolean } | null): boolean {
   return captureOn && session !== null && session.alive;
 }
+
+/**
+ * What the pane menu's capture item says. While a live process can receive
+ * the keys the item is the action the click performs; while none can there is
+ * nothing to capture, so the item states the fact instead and the pane
+ * disables it. `captureApplies(true, session)` is the "could capture apply
+ * here at all" half of the same question.
+ */
+export function captureMenuTitle(captureOn: boolean, session: { alive: boolean } | null): string {
+  if (!captureApplies(true, session)) return 'Keyboard not captured, no running shell';
+  return captureOn ? 'Release keyboard to Obsidian' : 'Capture keyboard in terminal';
+}
+
+/**
+ * What the notice says after the capture toggle. The setting is per pane and
+ * survives a shell that has exited, so turning it on without a process says
+ * what will happen rather than claiming the keys are held now.
+ */
+export function captureNotice(captureOn: boolean, session: { alive: boolean } | null): string {
+  if (captureOn && !captureApplies(true, session)) {
+    return 'Terminal: capture on for the next shell. No shell is running, so the keys stay with Obsidian.';
+  }
+  return captureOn ? 'Terminal: keyboard captured' : 'Terminal: keyboard released';
+}
