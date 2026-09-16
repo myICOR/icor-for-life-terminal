@@ -29,10 +29,10 @@ jobs:
       attestations: write
     steps:
       - name: Check out the tagged commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node from .node-version
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .node-version
           cache: npm
@@ -55,7 +55,7 @@ jobs:
         run: npm run gate
 
       - name: Attest main.js, manifest.json and styles.css
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: |
             main.js
@@ -63,12 +63,18 @@ jobs:
             styles.css
 
       - name: Publish the release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: ${{ github.ref_name }}
-          body_path: docs/releases/${{ github.ref_name }}.md
-          fail_on_unmatched_files: true
-          files: |
-            main.js
-            manifest.json
+        # gh, not a third-party action. Same three assets, same title (the tag
+        # itself) and the same notes file the previous step already proved is
+        # present. gh release create fails on an asset path that is not there,
+        # which is what fail_on_unmatched_files bought us.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh release create "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file "docs/releases/$GITHUB_REF_NAME.md" \
+            main.js \
+            manifest.json \
             styles.css
