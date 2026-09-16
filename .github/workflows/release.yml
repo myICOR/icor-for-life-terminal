@@ -67,12 +67,16 @@ jobs:
         # itself) and the same notes file the previous step already proved is
         # present. gh release create fails on an asset path that is not there,
         # which is what fail_on_unmatched_files bought us.
+        # --verify-tag makes the tag a precondition instead of something this
+        # run can mint: if the tag is not already on the remote, gh aborts
+        # rather than creating it from whatever commit the run happens to be on.
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           gh release create "$GITHUB_REF_NAME" \
             --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
             --title "$GITHUB_REF_NAME" \
             --notes-file "docs/releases/$GITHUB_REF_NAME.md" \
             main.js \
