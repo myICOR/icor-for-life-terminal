@@ -1,0 +1,61 @@
+name: CI
+
+# The pull request gate. It runs on every pull request and on every push to
+# main, and branch protection on main requires this `ci` check, so a red run
+# blocks the merge and a green one is the signal the reviewer reads.
+#
+# Merging ships nothing. A release is a bare version tag pushed by the
+# maintainer (see release.yml where present); this workflow never tags,
+# never publishes and never writes to the repository.
+#
+# Every action is pinned to a commit SHA (suite policy).
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      CHROME_BIN: /usr/bin/google-chrome
+    steps:
+      - name: Check out the commit under test
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node from .node-version
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Prove a real Chrome exists before the gate needs it
+        # The headless Chrome sweeps fail rather than skip when Chrome is
+        # missing. Failing here names the cause in one line at the top.
+        run: |
+          set -euo pipefail
+          if [ ! -x "$CHROME_BIN" ]; then
+            echo "No Chrome at $CHROME_BIN. The headless sweeps cannot run."
+            exit 1
+          fi
+          "$CHROME_BIN" --version
+
+      - name: Install exactly what the lockfile says
+        run: npm ci
+
+      - name: Gate (typecheck, build, lint, tests)
+        run: npm run gate
