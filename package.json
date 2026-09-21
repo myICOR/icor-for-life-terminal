@@ -1,9 +1,9 @@
 {
   "name": "icor-for-life-terminal",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "private": true,
   "description": "ICOR for Life - Terminal - a real terminal inside your vault.",
-  "license": "LicenseRef-ICOR-Source-Available-1.0",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "build": "node esbuild.config.mjs production",
