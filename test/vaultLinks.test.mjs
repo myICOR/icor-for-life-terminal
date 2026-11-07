@@ -17,6 +17,14 @@ const FILES = new Set([
   'Notes/café.md',
 ]);
 const ctx = { vaultName: 'zenjk', vaultRoot: '/Users/me/zenjk', isFile: (p) => FILES.has(p) };
+/** Provider actions that log what a click did. */
+const acts = (log) => ({
+  open: (p, e) => log.push(['open', p, e]),
+  reveal: (p) => log.push(['reveal', p]),
+  hint: (t) => log.push(['hint', t]),
+  openHint: 'Open in a new tab',
+  revealHint: 'Reveal in Finder',
+});
 const paths = (text, c = ctx) => findVaultPaths(text, c).map((m) => [text.slice(m.start, m.end), m.path]);
 
 test('a vault-relative path with spaces is found whole', () => {
@@ -119,7 +127,7 @@ test('wide characters take two cells and an early wrap leaves no gap', () => {
 test('the provider hands xterm 1-based inclusive ranges and opens the vault path', () => {
   const buf = rows(12, 'x zenjk: 06 ', 'AI Team/READ', 'ME.md done');
   const opened = [];
-  const provider = new VaultLinkProvider(() => ({ getLine: (y) => buf[y] }), () => ctx, (p) => opened.push(p));
+  const provider = new VaultLinkProvider(() => ({ getLine: (y) => buf[y] }), () => ctx, { ...acts([]), open: (p) => opened.push(p) });
   let got;
   provider.provideLinks(2, (links) => { got = links; });
   assert.equal(got.length, 1);
@@ -129,23 +137,41 @@ test('the provider hands xterm 1-based inclusive ranges and opens the vault path
   got[0].activate(click, got[0].text);
   assert.deepEqual(opened, ['06 AI Team/README.md']);
   const events = [];
-  new VaultLinkProvider(() => ({ getLine: (y) => buf[y] }), () => ctx, (p, e) => events.push(e))
+  new VaultLinkProvider(() => ({ getLine: (y) => buf[y] }), () => ctx, { ...acts([]), open: (p, e) => events.push(e) })
     .provideLinks(1, (links) => links[0].activate(click, links[0].text));
   assert.equal(events[0], click, 'the click event reaches the opener, for modifier keys');
   provider.provideLinks(1, (links) => { got = links; });
   assert.equal(got.length, 1, 'the same link from its first row');
   const empty = rows(12, 'nothing here');
-  new VaultLinkProvider(() => ({ getLine: (y) => empty[y] }), () => ctx, () => {}).provideLinks(1, (links) => { got = links; });
+  new VaultLinkProvider(() => ({ getLine: (y) => empty[y] }), () => ctx, acts([])).provideLinks(1, (links) => { got = links; });
   assert.equal(got, undefined);
 });
 
-test('only formats Obsidian shows itself are linked, never one for the default app', () => {
-  assert.deepEqual(paths('Downloads/x.command'), []);
-  assert.deepEqual(paths('zenjk: Downloads/x.html'), []);
-  assert.deepEqual(paths('Downloads/run.sh'), []);
-  const asked = [];
-  findVaultPaths('Downloads/x.command Downloads/x.html', { ...ctx, isFile: (q) => (asked.push(q), true) });
-  assert.deepEqual(asked, [], 'an unlisted format never reaches the vault');
+function clickAll(text) {
+  const log = [];
+  const buf = rows(text.length + 1, text);
+  new VaultLinkProvider(() => ({ getLine: (y) => buf[y] }), () => ctx, acts(log)).provideLinks(1, (links) => {
+    for (const l of links ?? []) {
+      l.hover(new Event('mouseover'), l.text);
+      l.activate(new Event('click'), l.text);
+      l.leave(new Event('mouseout'), l.text);
+    }
+  });
+  return log.map(([what, arg]) => [what, arg]);
+}
+
+test('a format Obsidian shows itself opens in a tab; any other vault file is only revealed', () => {
+  assert.deepEqual(clickAll('Downloads/x.command and zenjk: Downloads/x.html and Downloads/run.sh'), [
+    ['hint', 'Reveal in Finder'], ['reveal', 'Downloads/x.command'], ['hint', null],
+    ['hint', 'Reveal in Finder'], ['reveal', 'Downloads/x.html'], ['hint', null],
+    ['hint', 'Reveal in Finder'], ['reveal', 'Downloads/run.sh'], ['hint', null],
+  ]);
+  assert.deepEqual(clickAll('06 AI Team/README.md and Assets/scan.pdf'), [
+    ['hint', 'Open in a new tab'], ['open', '06 AI Team/README.md'], ['hint', null],
+    ['hint', 'Open in a new tab'], ['open', 'Assets/scan.pdf'], ['hint', null],
+  ]);
+  assert.deepEqual(clickAll('Downloads/missing.command Downloads/missing.md'), [], 'a file the vault does not hold gets no link');
+  assert.deepEqual(clickAll('m42: Downloads/x.command'), [], 'another vault\'s file is not revealed either');
   for (const ok of ['a.md', 'a.MD', 'b.base', 'c.canvas', 'd.png', 'e.mp3', 'f.mp4', 'g.pdf']) assert.ok(isOpenable(ok), ok);
   for (const no of ['a.html', 'a.command', 'a.sh', 'a.bat', 'a.js', 'a.lnk', 'md', 'dir.md/file']) assert.ok(!isOpenable(no), no);
 });

@@ -204,7 +204,17 @@ export class TerminalView extends ItemView {
         vaultRoot: this.plugin.vaultPath,
         isFile: (path) => this.app.vault.getFileByPath(path) !== null,
       }),
-      (path, evt) => this.openVaultFile(path, evt),
+      {
+        open: (path, evt) => this.openVaultFile(path, evt),
+        reveal: (path) => this.revealVaultFile(path),
+        hint: (text) => {
+          if (!term.element) return;
+          if (text) term.element.title = text;
+          else term.element.removeAttribute('title');
+        },
+        openHint: 'Open in a new tab',
+        revealHint: process.platform === 'darwin' ? 'Reveal in Finder' : 'Show in file manager',
+      },
     ));
     term.loadAddon(new Unicode11Addon());
     term.unicode.activeVersion = '11';
@@ -237,6 +247,16 @@ export class TerminalView extends ItemView {
       const message = err instanceof Error ? err.message : String(err);
       new Notice(`Terminal: could not open ${file.path}: ${message}`);
     });
+  }
+
+  /* Obsidian's public API has no reveal; this is the app's own "Reveal in Finder",
+     which resolves the vault path and checks it exists. Never a default-app open. */
+  private revealVaultFile(path: string): void {
+    const file = this.app.vault.getFileByPath(path);
+    if (!file) return;
+    const app = this.app as unknown as { showInFolder?: (path: string) => void };
+    if (typeof app.showInFolder === 'function') app.showInFolder(file.path);
+    else new Notice(`Terminal: this Obsidian version cannot reveal ${file.path} in the file manager.`);
   }
 
   private mountRenderer(): void {

@@ -1,8 +1,9 @@
 /* Vault file paths printed in the terminal become links that open the note.
  * Text is only a candidate: a link is made only for a path the vault index
- * holds as a file in a format Obsidian shows itself, so nothing outside the
- * vault, no URL scheme and no file for the system's default app is ever
- * opened from here. */
+ * holds as a file. A format Obsidian shows itself opens in a tab; any other
+ * file is only revealed in the system file manager, never opened, so nothing
+ * outside the vault, no URL scheme and no default-app handler is reached
+ * from here. */
 
 import type { IBufferCellPosition, ILink, ILinkProvider } from '@xterm/xterm';
 
@@ -67,7 +68,7 @@ export function toVaultPath(candidate: string, vaultRoot: string): string | null
 
 function existing(candidate: string, ctx: VaultLinkContext, budget: { left: number }): string | null {
   const p = toVaultPath(candidate, ctx.vaultRoot);
-  if (p === null || !isOpenable(p)) return null;
+  if (p === null) return null;
   /* A name typed on macOS may be stored decomposed; the printed text is usually composed. */
   for (const form of new Set([p, p.normalize('NFC'), p.normalize('NFD')])) {
     if (budget.left-- <= 0) return null;
@@ -164,11 +165,22 @@ export interface BufferLike {
   getLine(y: number): LineLike | undefined;
 }
 
+export interface VaultLinkActions {
+  /** Opens a format Obsidian shows itself. */
+  open(path: string, event: MouseEvent): void;
+  /** Shows any other file in the system file manager. */
+  reveal(path: string): void;
+  /** Shows or clears the hint for the link under the pointer. */
+  hint?(text: string | null): void;
+  openHint: string;
+  revealHint: string;
+}
+
 export class VaultLinkProvider implements ILinkProvider {
   constructor(
     private readonly buffer: () => BufferLike,
     private readonly ctx: () => VaultLinkContext,
-    private readonly open: (path: string, event: MouseEvent) => void,
+    private readonly actions: VaultLinkActions,
   ) {}
 
   provideLinks(bufferLineNumber: number, callback: (links: ILink[] | undefined) => void): void {
@@ -179,7 +191,15 @@ export class VaultLinkProvider implements ILinkProvider {
       const start = cells[m.start];
       const end = ends[m.end - 1];
       if (!start || !end) continue;
-      links.push({ range: { start, end }, text: text.slice(m.start, m.end), activate: (event) => this.open(m.path, event) });
+      const opens = isOpenable(m.path);
+      const hint = opens ? this.actions.openHint : this.actions.revealHint;
+      links.push({
+        range: { start, end },
+        text: text.slice(m.start, m.end),
+        activate: (event) => (opens ? this.actions.open(m.path, event) : this.actions.reveal(m.path)),
+        hover: () => this.actions.hint?.(hint),
+        leave: () => this.actions.hint?.(null),
+      });
     }
     callback(links.length ? links : undefined);
   }

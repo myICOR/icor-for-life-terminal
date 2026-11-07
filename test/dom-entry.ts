@@ -52,7 +52,7 @@ const opened: string[] = [];
 const provider = new VaultLinkProvider(
   () => narrow.buffer.active,
   () => ({ vaultName: 'zenjk', vaultRoot: '', isFile: (p) => files.has(p) }),
-  (p) => opened.push(p),
+  { open: (p) => opened.push(p), reveal: () => undefined, openHint: '', revealHint: '' },
 );
 const linksAt = (y: number) => {
   let out: { range: unknown; text: string }[] = [];
