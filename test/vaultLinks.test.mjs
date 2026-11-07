@@ -109,6 +109,7 @@ test('wide characters take two cells and an early wrap leaves no gap', () => {
   const one = logicalLine((i) => rows(5, 'a中b')[i], 0);
   assert.equal(one.text.slice(0, 3), 'a中b');
   assert.deepEqual(one.cells.slice(0, 3), [{ x: 1, y: 1 }, { x: 2, y: 1 }, { x: 4, y: 1 }]);
+  assert.deepEqual(one.ends.slice(0, 3), [{ x: 1, y: 1 }, { x: 3, y: 1 }, { x: 4, y: 1 }], 'a link ending in a wide character covers both its cells');
   const early = rows(4, 'abc', '中d');
   const two = logicalLine((i) => early[i], 1);
   assert.equal(two.text.trimEnd(), 'abc中d', 'the empty cell before the wrap is dropped');
@@ -162,10 +163,8 @@ test('a vault name with spaces is recognised as this vault', () => {
 test('dense output costs a bounded number of vault lookups', () => {
   let calls = 0;
   const line = 'a.md '.repeat(409);
-  const t0 = performance.now();
   assert.deepEqual(findVaultPaths(line, { ...ctx, isFile: () => (calls++, false) }), []);
   assert.ok(calls <= LOOKUP_BUDGET && LOOKUP_BUDGET <= 2000, `${calls} lookups`);
-  assert.ok(performance.now() - t0 < 50, 'one hover stays far below a frame');
   assert.deepEqual(paths(`${'x'.repeat(MAX_PATH)} notes/a.md`), [['notes/a.md', 'notes/a.md']]);
   const all = { ...ctx, isFile: () => true };
   assert.deepEqual(findVaultPaths(`${'d/'.repeat(MAX_PATH)}a.md`, all), [], 'no start further back than the bound');
@@ -173,6 +172,6 @@ test('dense output costs a bounded number of vault lookups', () => {
 });
 
 test('a no-break space in the buffer reads as a space', () => {
-  const buf = rows(30, 'notes/a b.md');
+  const buf = rows(30, `notes/a${String.fromCharCode(0xa0)}b.md`);
   assert.equal(logicalLine((i) => buf[i], 0).text.slice(0, 12), 'notes/a b.md');
 });

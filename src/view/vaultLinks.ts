@@ -126,6 +126,8 @@ export interface LogicalLine {
   text: string;
   /** The 1-based buffer cell of each string index of `text`. */
   cells: IBufferCellPosition[];
+  /** The last cell of each string index, which differs for a wide character. */
+  ends: IBufferCellPosition[];
 }
 
 /** The wrapped rows around 0-based row `y`, joined, with each character's cell. */
@@ -134,6 +136,7 @@ export function logicalLine(getLine: (y: number) => LineLike | undefined, y: num
   while (top > 0 && getLine(top)?.isWrapped) top--;
   let text = '';
   const cells: IBufferCellPosition[] = [];
+  const ends: IBufferCellPosition[] = [];
   for (let row = top; ; row++) {
     const line = getLine(row);
     if (!line || (row > top && !line.isWrapped)) break;
@@ -146,12 +149,15 @@ export function logicalLine(getLine: (y: number) => LineLike | undefined, y: num
       if (!cell || cell.getWidth() === 0) continue;
       const raw = cell.getChars();
       const chars = raw === '' || raw === '\u00a0' ? ' ' : raw;
-      for (let i = 0; i < chars.length; i++) cells.push({ x: x + 1, y: row + 1 });
+      for (let i = 0; i < chars.length; i++) {
+        cells.push({ x: x + 1, y: row + 1 });
+        ends.push({ x: x + cell.getWidth(), y: row + 1 });
+      }
       text += chars;
     }
     if (text.length > MAX_LINE) break;
   }
-  return { text, cells };
+  return { text, cells, ends };
 }
 
 export interface BufferLike {
@@ -167,11 +173,11 @@ export class VaultLinkProvider implements ILinkProvider {
 
   provideLinks(bufferLineNumber: number, callback: (links: ILink[] | undefined) => void): void {
     const buf = this.buffer();
-    const { text, cells } = logicalLine((y) => buf.getLine(y), bufferLineNumber - 1);
+    const { text, cells, ends } = logicalLine((y) => buf.getLine(y), bufferLineNumber - 1);
     const links: ILink[] = [];
     for (const m of findVaultPaths(text, this.ctx())) {
       const start = cells[m.start];
-      const end = cells[m.end - 1];
+      const end = ends[m.end - 1];
       if (!start || !end) continue;
       links.push({ range: { start, end }, text: text.slice(m.start, m.end), activate: (event) => this.open(m.path, event) });
     }
