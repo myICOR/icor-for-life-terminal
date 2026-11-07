@@ -3,9 +3,10 @@
  * pane holds exactly the terminal, a find bar when asked for, and one quiet
  * row when the process has ended. */
 
-import { ItemView, Notice, Scope, setIcon } from 'obsidian';
+import { ItemView, Keymap, Notice, Scope, setIcon } from 'obsidian';
 import type { Menu, ViewStateResult, WorkspaceLeaf } from 'obsidian';
 import { Terminal } from '@xterm/xterm';
+import type { IDisposable } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { SearchAddon } from '@xterm/addon-search';
 import { WebLinksAddon } from '@xterm/addon-web-links';
@@ -26,7 +27,7 @@ import { readFontFamily, readPalette } from './theme';
 import { EXIT_CEILING_MS, exitThenSwap, parseTerminalState } from './handoff';
 import type { LaunchKind, ReturnTo, TerminalViewState } from './handoff';
 import { TYPE_PROMPT_CEILING_MS, TYPE_SETTLE_MS, typeRefusal } from './typed';
-import { VaultLinkProvider } from './vaultLinks';
+import { isOpenable, VaultLinkProvider } from './vaultLinks';
 import type { TypeTarget } from './typed';
 import { externalLaunch, openExternalTerminal } from '../platform/external';
 import { PromptModal } from './PromptModal';
@@ -54,6 +55,7 @@ export class TerminalView extends ItemView {
   private fit: FitAddon | null = null;
   private search: SearchAddon | null = null;
   private webgl: WebglAddon | null = null;
+  private vaultLinks: IDisposable | null = null;
   private pty: PtyProcess | null = null;
   private ptyCleanup: (() => void)[] = [];
   private state: TerminalViewState = {};
@@ -195,14 +197,14 @@ export class TerminalView extends ItemView {
     term.loadAddon(this.fit);
     term.loadAddon(this.search);
     term.loadAddon(new WebLinksAddon((_evt, uri) => window.open(uri)));
-    term.registerLinkProvider(new VaultLinkProvider(
+    this.vaultLinks = term.registerLinkProvider(new VaultLinkProvider(
       () => term.buffer.active,
       () => ({
         vaultName: this.app.vault.getName(),
         vaultRoot: this.plugin.vaultPath,
         isFile: (path) => this.app.vault.getFileByPath(path) !== null,
       }),
-      (path) => this.openVaultFile(path),
+      (path, evt) => this.openVaultFile(path, evt),
     ));
     term.loadAddon(new Unicode11Addon());
     term.unicode.activeVersion = '11';
@@ -228,9 +230,13 @@ export class TerminalView extends ItemView {
     await Promise.resolve();
   }
 
-  private openVaultFile(path: string): void {
+  private openVaultFile(path: string, evt: MouseEvent): void {
     const file = this.app.vault.getFileByPath(path);
-    if (file) void this.app.workspace.getLeaf('tab').openFile(file);
+    if (!file || !isOpenable(file.path)) return;
+    this.app.workspace.getLeaf(Keymap.isModEvent(evt) || 'tab').openFile(file).catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err);
+      new Notice(`Terminal: could not open ${file.path}: ${message}`);
+    });
   }
 
   private mountRenderer(): void {
@@ -792,6 +798,8 @@ export class TerminalView extends ItemView {
     this.teardownPty();
     this.webgl?.dispose();
     this.webgl = null;
+    this.vaultLinks?.dispose();
+    this.vaultLinks = null;
     this.term?.dispose();
     this.term = null;
     this.fit = null;

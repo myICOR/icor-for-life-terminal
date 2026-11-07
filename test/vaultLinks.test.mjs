@@ -2,7 +2,7 @@
    file. The live half is in dom.test.mjs, on a real xterm buffer. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { findVaultPaths, logicalLine, toVaultPath, VaultLinkProvider } from './build/pure.mjs';
+import { findVaultPaths, isOpenable, logicalLine, toVaultPath, VaultLinkProvider, LOOKUP_BUDGET, MAX_PATH } from './build/pure.mjs';
 
 const FILES = new Set([
   '04 Inner World/My Life/Key Elements/Health.md',
@@ -10,6 +10,10 @@ const FILES = new Set([
   '06 AI Team/README.md',
   'README.md',
   'Assets/scan.pdf',
+  'Downloads/x.command',
+  'Downloads/x.html',
+  'Downloads/run.sh',
+  'notes/a.md',
   'Notes/café.md',
 ]);
 const ctx = { vaultName: 'zenjk', vaultRoot: '/Users/me/zenjk', isFile: (p) => FILES.has(p) };
@@ -120,11 +124,55 @@ test('the provider hands xterm 1-based inclusive ranges and opens the vault path
   assert.equal(got.length, 1);
   assert.deepEqual(got[0].range, { start: { x: 3, y: 1 }, end: { x: 5, y: 3 } });
   assert.equal(got[0].text, 'zenjk: 06 AI Team/README.md');
-  got[0].activate(new Event('click'), got[0].text);
+  const click = new Event('click');
+  got[0].activate(click, got[0].text);
   assert.deepEqual(opened, ['06 AI Team/README.md']);
+  const events = [];
+  new VaultLinkProvider(() => ({ getLine: (y) => buf[y] }), () => ctx, (p, e) => events.push(e))
+    .provideLinks(1, (links) => links[0].activate(click, links[0].text));
+  assert.equal(events[0], click, 'the click event reaches the opener, for modifier keys');
   provider.provideLinks(1, (links) => { got = links; });
   assert.equal(got.length, 1, 'the same link from its first row');
   const empty = rows(12, 'nothing here');
   new VaultLinkProvider(() => ({ getLine: (y) => empty[y] }), () => ctx, () => {}).provideLinks(1, (links) => { got = links; });
   assert.equal(got, undefined);
+});
+
+test('only formats Obsidian shows itself are linked, never one for the default app', () => {
+  assert.deepEqual(paths('Downloads/x.command'), []);
+  assert.deepEqual(paths('zenjk: Downloads/x.html'), []);
+  assert.deepEqual(paths('Downloads/run.sh'), []);
+  const asked = [];
+  findVaultPaths('Downloads/x.command Downloads/x.html', { ...ctx, isFile: (q) => (asked.push(q), true) });
+  assert.deepEqual(asked, [], 'an unlisted format never reaches the vault');
+  for (const ok of ['a.md', 'a.MD', 'b.base', 'c.canvas', 'd.png', 'e.mp3', 'f.mp4', 'g.pdf']) assert.ok(isOpenable(ok), ok);
+  for (const no of ['a.html', 'a.command', 'a.sh', 'a.bat', 'a.js', 'a.lnk', 'md', 'dir.md/file']) assert.ok(!isOpenable(no), no);
+});
+
+test('a vault name with spaces is recognised as this vault', () => {
+  for (const vaultName of ['My Vault', 'ICOR for Life']) {
+    const c = { ...ctx, vaultName };
+    assert.deepEqual(paths(`${vaultName}: notes/a.md`, c), [[`${vaultName}: notes/a.md`, 'notes/a.md']]);
+    assert.deepEqual(paths(`| ${vaultName}: notes/a.md |`, c), [[`${vaultName}: notes/a.md`, 'notes/a.md']]);
+    assert.deepEqual(paths('Other: notes/a.md', c), [], 'another name still makes no link');
+  }
+  assert.deepEqual(paths('NotMy Vault: notes/a.md', { ...ctx, vaultName: 'My Vault' }), [], 'the name starts at a boundary');
+});
+
+test('dense output costs a bounded number of vault lookups', () => {
+  let calls = 0;
+  const line = 'a.md '.repeat(409);
+  const t0 = performance.now();
+  assert.deepEqual(findVaultPaths(line, { ...ctx, isFile: () => (calls++, false) }), []);
+  assert.ok(calls <= LOOKUP_BUDGET && LOOKUP_BUDGET <= 2000, `${calls} lookups`);
+  assert.ok(performance.now() - t0 < 50, 'one hover stays far below a frame');
+  assert.deepEqual(paths(`${'x'.repeat(MAX_PATH)} notes/a.md`), [['notes/a.md', 'notes/a.md']]);
+  const all = { ...ctx, isFile: () => true };
+  assert.deepEqual(findVaultPaths(`${'d/'.repeat(MAX_PATH)}a.md`, all), [], 'no start further back than the bound');
+  assert.equal(findVaultPaths(`${'d/'.repeat(100)}a.md`, all).length, 1, 'a long path inside the bound still links');
+});
+
+test('a no-break space in the buffer reads as a space', () => {
+  const buf = rows(30, 'notes/a b.md');
+  assert.equal(logicalLine((i) => buf[i], 0).text.slice(0, 12), 'notes/a b.md');
 });
