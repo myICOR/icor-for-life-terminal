@@ -26,6 +26,7 @@ import { readFontFamily, readPalette } from './theme';
 import { EXIT_CEILING_MS, exitThenSwap, parseTerminalState } from './handoff';
 import type { LaunchKind, ReturnTo, TerminalViewState } from './handoff';
 import { TYPE_PROMPT_CEILING_MS, TYPE_SETTLE_MS, typeRefusal } from './typed';
+import { VaultLinkProvider } from './vaultLinks';
 import type { TypeTarget } from './typed';
 import { externalLaunch, openExternalTerminal } from '../platform/external';
 import { PromptModal } from './PromptModal';
@@ -194,6 +195,15 @@ export class TerminalView extends ItemView {
     term.loadAddon(this.fit);
     term.loadAddon(this.search);
     term.loadAddon(new WebLinksAddon((_evt, uri) => window.open(uri)));
+    term.registerLinkProvider(new VaultLinkProvider(
+      () => term.buffer.active,
+      () => ({
+        vaultName: this.app.vault.getName(),
+        vaultRoot: this.plugin.vaultPath,
+        isFile: (path) => this.app.vault.getFileByPath(path) !== null,
+      }),
+      (path) => this.openVaultFile(path),
+    ));
     term.loadAddon(new Unicode11Addon());
     term.unicode.activeVersion = '11';
     term.open(this.refs.surface);
@@ -216,6 +226,11 @@ export class TerminalView extends ItemView {
     }));
     this.plugin.trackView(this);
     await Promise.resolve();
+  }
+
+  private openVaultFile(path: string): void {
+    const file = this.app.vault.getFileByPath(path);
+    if (file) void this.app.workspace.getLeaf('tab').openFile(file);
   }
 
   private mountRenderer(): void {
