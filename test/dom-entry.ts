@@ -7,6 +7,7 @@
 import { Terminal } from '@xterm/xterm';
 import { buildPane } from '../src/view/pane';
 import { readPalette, readFontFamily, paletteTokens } from '../src/view/theme';
+import { VaultLinkProvider } from '../src/view/vaultLinks';
 
 type Opts = { cls?: string; text?: string; attr?: Record<string, string> };
 
@@ -41,11 +42,37 @@ term.open(refs.surface);
 refs.exit.setBack('Back to chat');
 refs.exit.show({ code: 0, signal: null, ready: true, detail: '' });
 refs.search.show();
+/* A narrow second terminal, so real xterm wraps the paths the link provider reads. */
+const linkHost = document.createElement('div');
+document.body.appendChild(linkHost);
+const narrow = new Terminal({ cols: 20, rows: 8 });
+narrow.open(linkHost);
+const files = new Set(['06 AI Team/README.md', 'Notes/Touche \u00e0 B\u00e2le.md', 'x\u4e2d/a.md']);
+const opened: string[] = [];
+const provider = new VaultLinkProvider(
+  () => narrow.buffer.active,
+  () => ({ vaultName: 'zenjk', vaultRoot: '', isFile: (p) => files.has(p) }),
+  { open: (p) => opened.push(p), reveal: () => undefined, openHint: '', revealHint: '' },
+);
+const linksAt = (y: number) => {
+  let out: { range: unknown; text: string }[] = [];
+  provider.provideLinks(y, (links) => {
+    out = (links ?? []).map((l) => {
+      l.activate(new MouseEvent('click'), l.text);
+      return { range: l.range, text: l.text };
+    });
+  });
+  return out;
+};
 term.write('ICOR_DOM_OK', () => {
-  const w = window as unknown as Record<string, unknown>;
-  w.ictPalette = palette;
-  w.ictTokens = paletteTokens();
-  w.ictRows = term.rows;
-  w.ictCols = term.cols;
-  document.body.setAttribute('data-ict-ready', '1');
+  narrow.write('zenjk: 06 AI Team/README.md\r\n\u4e2d\u4e2d Notes/Touche \u00e0 B\u00e2le.md\r\naaaaaaaaaaaaaaaaa x\u4e2d/a.md\r\nm42: 06 AI Team/README.md', () => {
+    const w = window as unknown as Record<string, unknown>;
+    w.ictPalette = palette;
+    w.ictTokens = paletteTokens();
+    w.ictRows = term.rows;
+    w.ictCols = term.cols;
+    w.ictVaultLinks = [1, 2, 3, 4, 5, 6, 7, 8].map(linksAt);
+    w.ictVaultOpened = opened;
+    document.body.setAttribute('data-ict-ready', '1');
+  });
 });

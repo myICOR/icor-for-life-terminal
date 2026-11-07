@@ -3,9 +3,10 @@
  * pane holds exactly the terminal, a find bar when asked for, and one quiet
  * row when the process has ended. */
 
-import { ItemView, Notice, Scope, setIcon } from 'obsidian';
+import { ItemView, Keymap, Notice, Scope, setIcon } from 'obsidian';
 import type { Menu, ViewStateResult, WorkspaceLeaf } from 'obsidian';
 import { Terminal } from '@xterm/xterm';
+import type { IDisposable } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { SearchAddon } from '@xterm/addon-search';
 import { WebLinksAddon } from '@xterm/addon-web-links';
@@ -26,6 +27,7 @@ import { readFontFamily, readPalette } from './theme';
 import { EXIT_CEILING_MS, exitThenSwap, parseTerminalState } from './handoff';
 import type { LaunchKind, ReturnTo, TerminalViewState } from './handoff';
 import { TYPE_PROMPT_CEILING_MS, TYPE_SETTLE_MS, typeRefusal } from './typed';
+import { isOpenable, VaultLinkProvider } from './vaultLinks';
 import type { TypeTarget } from './typed';
 import { externalLaunch, openExternalTerminal } from '../platform/external';
 import { PromptModal } from './PromptModal';
@@ -53,6 +55,7 @@ export class TerminalView extends ItemView {
   private fit: FitAddon | null = null;
   private search: SearchAddon | null = null;
   private webgl: WebglAddon | null = null;
+  private vaultLinks: IDisposable | null = null;
   private pty: PtyProcess | null = null;
   private ptyCleanup: (() => void)[] = [];
   private state: TerminalViewState = {};
@@ -194,6 +197,25 @@ export class TerminalView extends ItemView {
     term.loadAddon(this.fit);
     term.loadAddon(this.search);
     term.loadAddon(new WebLinksAddon((_evt, uri) => window.open(uri)));
+    this.vaultLinks = term.registerLinkProvider(new VaultLinkProvider(
+      () => term.buffer.active,
+      () => ({
+        vaultName: this.app.vault.getName(),
+        vaultRoot: this.plugin.vaultPath,
+        isFile: (path) => this.app.vault.getFileByPath(path) !== null,
+      }),
+      {
+        open: (path, evt) => this.openVaultFile(path, evt),
+        reveal: (path) => this.revealVaultFile(path),
+        hint: (text) => {
+          if (!term.element) return;
+          if (text) term.element.title = text;
+          else term.element.removeAttribute('title');
+        },
+        openHint: 'Open in a new tab',
+        revealHint: process.platform === 'darwin' ? 'Reveal in Finder' : 'Show in file manager',
+      },
+    ));
     term.loadAddon(new Unicode11Addon());
     term.unicode.activeVersion = '11';
     term.open(this.refs.surface);
@@ -216,6 +238,25 @@ export class TerminalView extends ItemView {
     }));
     this.plugin.trackView(this);
     await Promise.resolve();
+  }
+
+  private openVaultFile(path: string, evt: MouseEvent): void {
+    const file = this.app.vault.getFileByPath(path);
+    if (!file || !isOpenable(file.path)) return;
+    this.app.workspace.getLeaf(Keymap.isModEvent(evt) || 'tab').openFile(file).catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err);
+      new Notice(`Terminal: could not open ${file.path}: ${message}`);
+    });
+  }
+
+  /* Obsidian's public API has no reveal; this is the app's own "Reveal in Finder",
+     which resolves the vault path and checks it exists. Never a default-app open. */
+  private revealVaultFile(path: string): void {
+    const file = this.app.vault.getFileByPath(path);
+    if (!file) return;
+    const app = this.app as unknown as { showInFolder?: (path: string) => void };
+    if (typeof app.showInFolder === 'function') app.showInFolder(file.path);
+    else new Notice(`Terminal: this Obsidian version cannot reveal ${file.path} in the file manager.`);
   }
 
   private mountRenderer(): void {
@@ -777,6 +818,8 @@ export class TerminalView extends ItemView {
     this.teardownPty();
     this.webgl?.dispose();
     this.webgl = null;
+    this.vaultLinks?.dispose();
+    this.vaultLinks = null;
     this.term?.dispose();
     this.term = null;
     this.fit = null;
