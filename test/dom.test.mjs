@@ -131,3 +131,21 @@ test('the pane mounts, every control is a labelled <button>, and the tokens reso
     await chrome.close();
   }
 });
+
+/* The link provider on a real xterm buffer, 20 columns wide: a path wrapped
+   over two rows, wide characters before a path, a path whose wide character wraps
+   early, and another vault's prefix. */
+test('vault paths on a real xterm buffer link with the right cell ranges', async () => {
+  const chrome = await Chrome.launch();
+  try {
+    await mount(chrome, false);
+    const { links, opened } = await chrome.evaluate('({ links: window.ictVaultLinks, opened: window.ictVaultOpened })');
+    const a = { text: 'zenjk: 06 AI Team/README.md', range: { start: { x: 1, y: 1 }, end: { x: 7, y: 2 } } };
+    const b = { text: 'Notes/Touche à Bâle.md', range: { start: { x: 6, y: 3 }, end: { x: 7, y: 4 } } };
+    const c = { text: 'x中/a.md', range: { start: { x: 19, y: 5 }, end: { x: 7, y: 6 } } };
+    assert.deepEqual(links, [[a], [a], [b], [b], [c], [c], [], []]);
+    assert.deepEqual(opened, ['06 AI Team/README.md', '06 AI Team/README.md', 'Notes/Touche à Bâle.md', 'Notes/Touche à Bâle.md', 'x中/a.md', 'x中/a.md']);
+  } finally {
+    await chrome.close();
+  }
+});
