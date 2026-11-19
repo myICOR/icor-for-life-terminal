@@ -59,6 +59,12 @@ test('every token in the block defers to an --ink-* channel first', () => {
   assert.deepEqual(bad, []);
 });
 
+test('bright red follows the theme alert token, not the accent, in both token blocks', () => {
+  const lines = [...own.matchAll(/--ict-ansi-bright-red:\s*([^;]+);/g)].map((m) => m[1].trim());
+  assert.equal(lines.length, 2, 'one bright red in the light block, one in the dark block');
+  for (const v of lines) assert.match(v, /^var\(--ink-callout-alert, #[0-9a-f]{6}\)$/i, `bright red is ${v}`);
+});
+
 test('the shipped stylesheet carries none of the findings the directory scanner rejects', () => {
   assert.doesNotMatch(shipped, /!important/, '!important survived assembly');
   assert.doesNotMatch(shipped, /^\s*user-select\s*:/m, 'unprefixed user-select survived assembly');
