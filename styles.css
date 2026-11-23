@@ -284,7 +284,7 @@
 
 /* ==================================================== 2. ICOR Terminal */
 
-/* ICOR for Life - Terminal - INKLINE visual grammar.
+/* ICOR Terminal - INKLINE visual grammar.
  * Every colour rides an --ink-* token with a stock Obsidian fallback, so the
  * plugin degrades legibly outside the INKLINE theme. A raw hex outside the
  * token block below is a defect. Gaps are 4/8/12/16/24 rungs; hairlines are

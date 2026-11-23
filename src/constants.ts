@@ -15,7 +15,7 @@ export const INK_PLUGIN_NAME = 'icor-for-life-terminal';
 /** Stored in the user's workspace.json; a key other files are written under. */
 export const VIEW_TYPE_TERMINAL = 'icor-for-life-terminal';
 
-/** The ICOR for Life - AI Chat view type a `Back to chat` returns a leaf to (docs/handoff.md). */
+/** The ICOR AI Chat view type a `Back to chat` returns a leaf to (docs/handoff.md). */
 export const CHAT_VIEW_TYPE = 'icor-chat-view';
 /** The AI Chat plugin id, for the "is it installed" wording. */
 export const CHAT_PLUGIN_ID = 'icor-for-life-chat';
