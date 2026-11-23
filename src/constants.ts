@@ -20,7 +20,7 @@ export const CHAT_VIEW_TYPE = 'icor-chat-view';
 /** The AI Chat plugin id, for the "is it installed" wording. */
 export const CHAT_PLUGIN_ID = 'icor-for-life-chat';
 
-/** The Lucide icon the ribbon, the tab and the tree launcher share. */
+/** The Lucide icon the ribbon and the tab share. */
 export const TERMINAL_ICON = 'terminal';
 
 /** What the child sees as TERM_PROGRAM, so scripts can tell where they run. */

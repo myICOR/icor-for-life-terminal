@@ -517,19 +517,7 @@
 }
 .ict-notice .ict-btn { align-self: flex-start; }
 
-/* ------------------------------------------------------------ 4 launcher */
-
-.ict-tree-launcher {
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-  padding: var(--size-2-2);
-  height: auto;
-  font: inherit;
-}
-.ict-tree-launcher:focus-visible { outline: 2px solid var(--ict-marker); outline-offset: 1px; }
-
-/* ------------------------------------------------------------ 5 settings */
+/* ------------------------------------------------------------ 4 settings */
 
 .ict-settings-section {
   display: flex;

@@ -38,7 +38,10 @@ after a reload.
 
 ## Getting started
 
-Open a terminal from the command palette. It starts in your vault folder.
+Open a terminal from its icon in the ribbon on the left, or from the command
+palette. It starts in your vault folder. The icon opens a short menu: a new
+terminal, one at the folder of the note you have open, one in a split, and
+Claude Code. You can move or hide it in Settings, Appearance, Ribbon menu.
 
 The **Claude Code launcher** starts a session already in the right place, so
 you never start one against the wrong folder.

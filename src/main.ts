@@ -1,9 +1,9 @@
 /* ICOR for Life - Terminal. A real terminal in a leaf: the login shell on a
  * pseudo-terminal, tabs and splits through Obsidian's own leaves, a ribbon
- * and file-tree launcher in the suite pattern, and a one-command Claude Code
- * launcher in the vault folder. */
+ * icon that opens the launcher menu, and a one-command Claude Code launcher
+ * in the vault folder. */
 
-import { FileSystemAdapter, Menu, Notice, Plugin, setIcon } from 'obsidian';
+import { FileSystemAdapter, Menu, Notice, Plugin } from 'obsidian';
 import type { WorkspaceLeaf } from 'obsidian';
 import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
@@ -22,7 +22,6 @@ import { TerminalView } from './view/TerminalView';
 import type { LaunchKind } from './view/TerminalView';
 import { textRefusal } from './view/typed';
 
-const TREE_LAUNCHER_CLASS = 'ict-tree-launcher';
 const RIBBON_MENU_CLASS = 'ict-menu';
 const RIBBON_TOOLTIP = 'Terminal';
 
@@ -76,6 +75,9 @@ export default class TerminalPlugin extends Plugin {
     this.registerView(VIEW_TYPE_TERMINAL, (leaf) => new TerminalView(leaf, this));
     this.addSettingTab(new TerminalSettingsTab(this.app, this));
 
+    /* The one entry point is Obsidian's own ribbon (Tom, 2026-11-23): a member
+       reorders or hides it in Settings, Appearance, Ribbon menu like any other
+       plugin's icon. Obsidian removes it on unload. */
     this.addRibbonIcon(TERMINAL_ICON, RIBBON_TOOLTIP, (evt) => {
       const target = evt.currentTarget;
       const rect = target instanceof HTMLElement ? target.getBoundingClientRect() : null;
@@ -119,9 +121,6 @@ export default class TerminalPlugin extends Plugin {
         return true;
       },
     });
-
-    this.app.workspace.onLayoutReady(() => this.mountTreeLauncher());
-    this.registerEvent(this.app.workspace.on('layout-change', () => this.mountTreeLauncher()));
   }
 
   override onunload(): void {
@@ -129,7 +128,6 @@ export default class TerminalPlugin extends Plugin {
        hangs up the shell behind it. The leaves stay where they are so the
        layout survives an update; a reload relaunches them. */
     for (const v of [...this.views]) v.terminate();
-    for (const el of Array.from(document.querySelectorAll(`.${TREE_LAUNCHER_CLASS}`))) el.remove();
   }
 
   private addTerminalCommand(id: string, name: string, run: (view: TerminalView) => void): void {
@@ -345,24 +343,7 @@ export default class TerminalPlugin extends Plugin {
 
   /* ------------------------------------------------------------ launchers */
 
-  /* The icon-only launcher in the file explorer's tool-button row, the
-   * suite's own pattern. A real <button>, so it has a tab stop and the
-   * theme's focus ring can ever fire. */
-  private mountTreeLauncher(): void {
-    for (const leaf of this.app.workspace.getLeavesOfType('file-explorer')) {
-      const row = leaf.view?.containerEl?.querySelector('.nav-buttons-container');
-      if (!row || row.querySelector(`.${TREE_LAUNCHER_CLASS}`)) continue;
-      const btn = row.createEl('button', { cls: `clickable-icon nav-action-button ${TREE_LAUNCHER_CLASS}` });
-      btn.type = 'button';
-      setIcon(btn, TERMINAL_ICON);
-      btn.setAttr('aria-label', RIBBON_TOOLTIP);
-      this.registerDomEvent(btn, 'click', () => {
-        const rect = btn.getBoundingClientRect();
-        this.openLauncherMenu({ x: rect.left, y: rect.bottom });
-      });
-    }
-  }
-
+  /* The launcher menu the ribbon icon opens, placed beside the icon. */
   private openLauncherMenu(at: { x: number; y: number }): void {
     const menu = new Menu();
     menu.addItem((i) => i.setTitle('New terminal').setIcon(TERMINAL_ICON).onClick(() => void this.openTerminal({})));
