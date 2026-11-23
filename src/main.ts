@@ -1,4 +1,4 @@
-/* ICOR for Life - Terminal. A real terminal in a leaf: the login shell on a
+/* ICOR Terminal. A real terminal in a leaf: the login shell on a
  * pseudo-terminal, tabs and splits through Obsidian's own leaves, a ribbon
  * icon that opens the launcher menu, and a one-command Claude Code launcher
  * in the vault folder. */

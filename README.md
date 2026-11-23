@@ -1,4 +1,4 @@
-# ICOR for Life - Terminal
+# ICOR Terminal
 
 **A real terminal, in the pane next to your notes.**
 

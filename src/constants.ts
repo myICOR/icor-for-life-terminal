@@ -1,7 +1,7 @@
 /* Names that cross module boundaries. Nothing here computes. */
 
 export const PLUGIN_ID = 'icor-for-life-terminal';
-export const PLUGIN_NAME = 'ICOR for Life - Terminal';
+export const PLUGIN_NAME = 'ICOR Terminal';
 
 /**
  * The declaration every root this plugin owns carries. The ICOR for Life -

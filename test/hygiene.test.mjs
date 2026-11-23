@@ -36,7 +36,7 @@ test('no em dash or en dash anywhere in the repo text', () => {
 
 /* The shipped stylesheet, section 2, with comments blanked so line numbers hold. */
 const shipped = read('styles.css');
-const ownStart = shipped.indexOf('2. ICOR for Life - Terminal');
+const ownStart = shipped.indexOf('2. ICOR Terminal');
 assert.ok(ownStart > 0, 'styles.css carries the assembled section marker');
 /* Comments are blanked BEFORE slicing, so the section marker comment itself
    cannot be read as a selector; blanking keeps every line in place. */
