@@ -43,7 +43,7 @@
   --ict-ansi-cyan: var(--ink-hue-cyan, #4e6b73);
   --ict-ansi-white: var(--ink-paper-dim, #4d4a42);
   --ict-ansi-bright-black: var(--ink-paper-faint, #5a574e);
-  --ict-ansi-bright-red: var(--ink-marker, #d43f16);
+  --ict-ansi-bright-red: var(--ink-callout-alert, #d43f16);
   --ict-ansi-bright-green: var(--ink-success-dot, #5e7a60);
   --ict-ansi-bright-yellow: var(--ink-warning, #8a6f33);
   --ict-ansi-bright-blue: var(--ink-hue-indigo, #565e7e);
@@ -75,7 +75,7 @@
   --ict-ansi-cyan: var(--ink-hue-cyan, #7a99a1);
   --ict-ansi-white: var(--ink-paper-dim, #c9c4b8);
   --ict-ansi-bright-black: var(--ink-paper-faint, #8e897d);
-  --ict-ansi-bright-red: var(--ink-marker, #ff5a2d);
+  --ict-ansi-bright-red: var(--ink-callout-alert, #ff5a2d);
   --ict-ansi-bright-green: var(--ink-success-dot, #7d9a7f);
   --ict-ansi-bright-yellow: var(--ink-warning, #c2a35c);
   --ict-ansi-bright-blue: var(--ink-hue-indigo, #8087a6);
