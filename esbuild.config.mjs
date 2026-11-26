@@ -1,4 +1,4 @@
-/* Build ICOR for Life - Terminal into a single CommonJS main.js for Obsidian.
+/* Build ICOR Terminal into a single CommonJS main.js for Obsidian.
  *
  * Two things this build does that a stock Obsidian sample does not:
  *
@@ -78,7 +78,7 @@ export function assembleStyles() {
   const xterm = transformUpstreamCss(readFileSync('node_modules/@xterm/xterm/css/xterm.css', 'utf8'));
   const own = readFileSync('src/terminal.css', 'utf8');
   const out = [
-    '/* ICOR for Life - Terminal - styles.css is ASSEMBLED by esbuild.config.mjs.',
+    '/* ICOR Terminal - styles.css is ASSEMBLED by esbuild.config.mjs.',
     ' * Edit src/terminal.css, never this file. Section 1 is @xterm/xterm/css/xterm.css',
     ' * verbatim (MIT, see THIRD-PARTY-NOTICES.md); section 2 is the plugin. */',
     '',
@@ -86,7 +86,7 @@ export function assembleStyles() {
     '',
     xterm.trim(),
     '',
-    '/* ==================================================== 2. ICOR for Life - Terminal */',
+    '/* ==================================================== 2. ICOR Terminal */',
     '',
     own.trim(),
     '',

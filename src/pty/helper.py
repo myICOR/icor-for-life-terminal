@@ -1,4 +1,4 @@
-# ICOR for Life - Terminal: the pty helper.
+# ICOR Terminal: the pty helper.
 #
 # Spawned by the plugin as `python3 -c <this file> <cols> <rows> -- <command> [args...]`
 # with four pipes. It forks the command onto a real pseudo-terminal and proxies:

@@ -673,7 +673,7 @@ export class TerminalView extends ItemView {
     const target = this.returnTarget();
     if (!target || this.swapping) return;
     if (!this.viewTypeKnown(target.type)) {
-      const what = target.type === CHAT_VIEW_TYPE ? `ICOR for Life - AI Chat (${CHAT_PLUGIN_ID}) is not enabled` : `no view of type ${target.type} is registered`;
+      const what = target.type === CHAT_VIEW_TYPE ? `ICOR AI Chat (${CHAT_PLUGIN_ID}) is not enabled` : `no view of type ${target.type} is registered`;
       new Notice(`Terminal: cannot go back, ${what}.`);
       return;
     }

@@ -1,4 +1,4 @@
-/* ICOR for Life - Terminal - styles.css is ASSEMBLED by esbuild.config.mjs.
+/* ICOR Terminal - styles.css is ASSEMBLED by esbuild.config.mjs.
  * Edit src/terminal.css, never this file. Section 1 is @xterm/xterm/css/xterm.css
  * verbatim (MIT, see THIRD-PARTY-NOTICES.md); section 2 is the plugin. */
 
@@ -282,9 +282,9 @@
 	box-shadow: var(--vscode-scrollbar-shadow, #000) 6px 0 6px -6px inset;
 }
 
-/* ==================================================== 2. ICOR for Life - Terminal */
+/* ==================================================== 2. ICOR Terminal */
 
-/* ICOR for Life - Terminal - INKLINE visual grammar.
+/* ICOR Terminal - INKLINE visual grammar.
  * Every colour rides an --ink-* token with a stock Obsidian fallback, so the
  * plugin degrades legibly outside the INKLINE theme. A raw hex outside the
  * token block below is a defect. Gaps are 4/8/12/16/24 rungs; hairlines are
@@ -517,19 +517,7 @@
 }
 .ict-notice .ict-btn { align-self: flex-start; }
 
-/* ------------------------------------------------------------ 4 launcher */
-
-.ict-tree-launcher {
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-  padding: var(--size-2-2);
-  height: auto;
-  font: inherit;
-}
-.ict-tree-launcher:focus-visible { outline: 2px solid var(--ict-marker); outline-offset: 1px; }
-
-/* ------------------------------------------------------------ 5 settings */
+/* ------------------------------------------------------------ 4 settings */
 
 .ict-settings-section {
   display: flex;

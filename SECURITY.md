@@ -1,6 +1,6 @@
 # Security Policy
 
-ICOR for Life - Terminal is a terminal. It starts your login shell, or any
+ICOR Terminal is a terminal. It starts your login shell, or any
 command you configure, as a real process on the machine Obsidian is running
 on, with your user's permissions, in a folder of your choosing. Everything
 you can do in Terminal.app or Windows Terminal you can do here, and so can

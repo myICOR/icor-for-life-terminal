@@ -1,4 +1,4 @@
-/* The same-pane hand-off with ICOR for Life - AI Chat, the pure part.
+/* The same-pane hand-off with ICOR AI Chat, the pure part.
  *
  * Three things live here and none of them touches Obsidian or a process:
  *   - the leaf state as another plugin hands it over (parsed, never trusted);
